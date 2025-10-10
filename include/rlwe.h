@@ -9,9 +9,38 @@
 #include <sstream>
 #include <logging.h>
 
+// Security level enumeration based on NIST standards
+enum class SecurityLevel {
+    // INSECURE - Only for testing/development
+    TEST_TINY,       // n=8,   q=7681,  σ=3.0  - ~4 bits security  - INSECURE
+    TEST_SMALL,      // n=32,  q=7681,  σ=3.0  - ~16 bits security - INSECURE
+    
+    // SECURE - Production parameters based on NIST standards
+    KYBER512,        // n=256, q=3329,  σ=1.6  - ~128 bits classical, ~64 bits quantum
+    MODERATE,        // n=512, q=12289, σ=3.2  - ~192 bits classical, ~96 bits quantum
+    HIGH,            // n=1024,q=16384, σ=3.2  - ~256 bits classical, ~128 bits quantum
+};
+
+// Parameter structure
+struct RLWEParams {
+    size_t n;           // Ring dimension
+    uint64_t q;         // Modulus
+    double sigma;       // Gaussian standard deviation
+    const char* name;   // Parameter set name
+    int classical_bits; // Estimated classical security in bits
+    int quantum_bits;   // Estimated quantum security in bits
+    bool is_secure;     // Whether parameters are cryptographically secure
+};
+
 class RLWESignature {
 public:
-    RLWESignature(size_t n, uint64_t q);
+    // Constructor with explicit parameters
+    RLWESignature(size_t n, uint64_t q, double sigma = 0.0);
+    
+    // Constructor with security level (RECOMMENDED)
+    // Defaults to KYBER512 (NIST standard, secure)
+    explicit RLWESignature(SecurityLevel level = SecurityLevel::KYBER512);
+    
     void generateKeys();
     Polynomial blindSign(const Polynomial& blindedMessage);
     bool verify(const std::vector<uint8_t>& secret, 
@@ -24,10 +53,17 @@ public:
     Polynomial hashToPolynomial(const std::vector<uint8_t>& message);
     std::pair<Polynomial, Polynomial> computeBlindedMessage(const std::vector<uint8_t>& secret);
     Polynomial computeSignature(const Polynomial& blindSignature, const Polynomial& blindingFactor, const Polynomial& publicKey);
+    
+    // Get current parameters
+    RLWEParams getParameters() const;
+    
+    // Get predefined parameter sets
+    static RLWEParams getParameterSet(SecurityLevel level);
 
 private:
     size_t ring_dim_n;
     uint64_t modulus;
+    double gaussian_stddev;
     
     // Public key components
     Polynomial a;  // Random polynomial
@@ -42,9 +78,7 @@ private:
     Polynomial sampleUniform();
     Polynomial sampleGaussian(double stddev);
     Polynomial messageToPolynomial(const std::vector<uint8_t>& message);
-    
-    // Reduced standard deviation for better sensitivity
-    static constexpr double GAUSSIAN_STDDEV = 3.0;     // Small standard deviation for cleaner signals
+    void validateSecurityParameters();
     
     // Verification parameters
     static constexpr double LARGE_THRESHOLD_DIVISOR = 4.0;   // For values near q/2

@@ -5,15 +5,12 @@
 
 class RLWETest : public ::testing::Test {
 protected:
-    // Using parameters large enough for test messages
-    const size_t n = 8;        // Ring dimension
-    const uint64_t q = 7681;   // Modulus (should be prime in practice)
-    
     void SetUp() override {
-        rlwe = std::make_unique<RLWESignature>(n, q);
+        // Use TEST_TINY for fast unit tests
+        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_TINY);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
-        Logger::log("Test setup with n=" + std::to_string(n) + ", q=" + std::to_string(q));
+        Logger::log("Test setup with TEST_TINY parameters (INSECURE - for testing only)");
     }
     
     void TearDown() override {
@@ -26,18 +23,34 @@ protected:
 // New test class for larger polynomial degree
 class RLWELargeTest : public ::testing::Test {
 protected:
-    const size_t n = 32;       // Larger ring dimension
-    const uint64_t q = 7681;   // Same modulus for comparison
-    
     void SetUp() override {
-        rlwe = std::make_unique<RLWESignature>(n, q);
+        // Use TEST_SMALL for larger but still fast tests
+        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_SMALL);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
-        Logger::log("Large polynomial test setup with n=" + std::to_string(n) + ", q=" + std::to_string(q));
+        Logger::log("Large polynomial test setup with TEST_SMALL parameters (INSECURE - for testing only)");
     }
     
     void TearDown() override {
         Logger::log("Large polynomial test complete\n");
+    }
+    
+    std::unique_ptr<RLWESignature> rlwe;
+};
+
+// New test class for NIST-standard secure parameters
+class RLWESecureTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Use KYBER512 for secure parameters
+        rlwe = std::make_unique<RLWESignature>(SecurityLevel::KYBER512);
+        Logger::setOutputStream(std::cout);
+        Logger::enable_logging = true;
+        Logger::log("Secure parameter test setup with KYBER512 (NIST Standard)");
+    }
+    
+    void TearDown() override {
+        Logger::log("Secure parameter test complete\n");
     }
     
     std::unique_ptr<RLWESignature> rlwe;
@@ -53,13 +66,15 @@ TEST_F(RLWETest, KeyGeneration) {
     });
     
     auto [a, b] = rlwe->getPublicKey();
+    auto params = rlwe->getParameters();
+    
     Logger::log("Public key a: " + a.toString());
     Logger::log("Public key b: " + b.toString());
     
-    EXPECT_EQ(a.degree(), n) << "Public key 'a' has wrong degree";
-    EXPECT_EQ(b.degree(), n) << "Public key 'b' has wrong degree";
-    EXPECT_EQ(a.getModulus(), q) << "Public key 'a' has wrong modulus";
-    EXPECT_EQ(b.getModulus(), q) << "Public key 'b' has wrong modulus";
+    EXPECT_EQ(a.degree(), params.n) << "Public key 'a' has wrong degree";
+    EXPECT_EQ(b.degree(), params.n) << "Public key 'b' has wrong degree";
+    EXPECT_EQ(a.getModulus(), params.q) << "Public key 'a' has wrong modulus";
+    EXPECT_EQ(b.getModulus(), params.q) << "Public key 'b' has wrong modulus";
 }
 
 TEST_F(RLWETest, CompleteBlindSignatureFlow) {
@@ -160,14 +175,17 @@ TEST_F(RLWELargeTest, CompleteBlindSignatureFlowLarge) {
     EXPECT_FALSE(wrong_verify) << "Signature incorrectly verified with wrong secret";
     
     // 7. Additional verification for polynomial degree
+    auto params = rlwe->getParameters();
     Logger::log("\n7. Verifying polynomial degrees");
-    EXPECT_EQ(blindedMessage.degree(), n) << "Blinded message has wrong degree";
-    EXPECT_EQ(blindSignature.degree(), n) << "Blind signature has wrong degree";
-    EXPECT_EQ(signature.degree(), n) << "Final signature has wrong degree";
+    EXPECT_EQ(blindedMessage.degree(), params.n) << "Blinded message has wrong degree";
+    EXPECT_EQ(blindSignature.degree(), params.n) << "Blind signature has wrong degree";
+    EXPECT_EQ(signature.degree(), params.n) << "Final signature has wrong degree";
 }
 
 TEST_F(RLWETest, HashToPolynomial) {
     Logger::log("\n=== Starting Hash To Polynomial Test ===");
+    
+    auto params = rlwe->getParameters();
     
     // Test with a simple message
     std::vector<uint8_t> message1 = {0x12, 0x34};
@@ -179,16 +197,16 @@ TEST_F(RLWETest, HashToPolynomial) {
     
     // Check polynomial properties
     Logger::log("\nChecking polynomial properties:");
-    Logger::log("Degree: " + std::to_string(poly1.degree()) + " (expected: " + std::to_string(n) + ")");
-    Logger::log("Modulus: " + std::to_string(poly1.getModulus()) + " (expected: " + std::to_string(q) + ")");
+    Logger::log("Degree: " + std::to_string(poly1.degree()) + " (expected: " + std::to_string(params.n) + ")");
+    Logger::log("Modulus: " + std::to_string(poly1.getModulus()) + " (expected: " + std::to_string(params.q) + ")");
     
-    EXPECT_EQ(poly1.degree(), n) << "Hash polynomial has wrong degree";
-    EXPECT_EQ(poly1.getModulus(), q) << "Hash polynomial has wrong modulus";
+    EXPECT_EQ(poly1.degree(), params.n) << "Hash polynomial has wrong degree";
+    EXPECT_EQ(poly1.getModulus(), params.q) << "Hash polynomial has wrong modulus";
     
     // Check coefficients are binary (0 or q/2)
     Logger::log("\nChecking coefficient values:");
     const auto& coeffs1 = poly1.getCoeffs();
-    uint64_t q_half = q / 2;
+    uint64_t q_half = params.q / 2;
     for (size_t i = 0; i < coeffs1.size(); i++) {
         Logger::log("Coefficient " + std::to_string(i) + ": " + std::to_string(coeffs1[i]));
         EXPECT_TRUE(coeffs1[i] == 0 || coeffs1[i] == q_half) 
@@ -229,7 +247,7 @@ TEST_F(RLWETest, VerifyFailsOnTamperedSecret) {
     Polynomial blindSignature = rlwe->blindSign(blindedMessage);
     Logger::log("Blind signature: " + blindSignature.toString());
     
-    Polynomial signature = rlwe->computeSignature(blindSignature, blindingFactor, rlwe->getPublicKey().first);
+    Polynomial signature = rlwe->computeSignature(blindSignature, blindingFactor, rlwe->getPublicKey().second);
     Logger::log("Final signature: " + signature.toString());
     
     // Verify with tampered secret
@@ -243,6 +261,8 @@ TEST_F(RLWETest, VerifyFailsOnTamperedSecret) {
 TEST_F(RLWETest, VerifyFailsOnForgedSignature) {
     Logger::log("\n=== Starting Forged Signature Test ===");
     
+    auto params = rlwe->getParameters();
+    
     // Setup
     Logger::log("Generating keys...");
     rlwe->generateKeys();
@@ -251,8 +271,8 @@ TEST_F(RLWETest, VerifyFailsOnForgedSignature) {
     
     // Create forged signature
     Logger::log("\nCreating forged signature (all coefficients = 1)");
-    Polynomial forged_sig(n, q);
-    std::vector<uint64_t> forged_coeffs(n, 1);
+    Polynomial forged_sig(params.n, params.q);
+    std::vector<uint64_t> forged_coeffs(params.n, 1);
     forged_sig.setCoefficients(forged_coeffs);
     Logger::log("Forged signature: " + forged_sig.toString());
     
@@ -266,6 +286,8 @@ TEST_F(RLWETest, VerifyFailsOnForgedSignature) {
 TEST_F(RLWETest, VerifyFailsOnZeroSignature) {
     Logger::log("\n=== Starting Zero Signature Test ===");
     
+    auto params = rlwe->getParameters();
+    
     // Setup
     Logger::log("Generating keys...");
     rlwe->generateKeys();
@@ -274,8 +296,8 @@ TEST_F(RLWETest, VerifyFailsOnZeroSignature) {
     
     // Create zero signature
     Logger::log("\nCreating zero signature (all coefficients = 0)");
-    Polynomial zero_sig(n, q);
-    std::vector<uint64_t> zero_coeffs(n, 0);
+    Polynomial zero_sig(params.n, params.q);
+    std::vector<uint64_t> zero_coeffs(params.n, 0);
     zero_sig.setCoefficients(zero_coeffs);
     Logger::log("Zero signature: " + zero_sig.toString());
     
@@ -284,4 +306,42 @@ TEST_F(RLWETest, VerifyFailsOnZeroSignature) {
     bool verified = rlwe->verify(secret, zero_sig);
     Logger::log("Zero signature verification result: " + std::string(verified ? "INCORRECTLY SUCCEEDED" : "CORRECTLY FAILED"));
     EXPECT_FALSE(verified) << "Zero signature incorrectly verified";
+}
+
+// New test with secure KYBER512 parameters
+TEST_F(RLWESecureTest, CompleteBlindSignatureFlowSecure) {
+    Logger::log("\n=== Starting Complete Blind Signature Flow with KYBER512 ===");
+    
+    // 1. Server setup
+    Logger::log("\n1. Server Setup (KYBER512 - NIST Standard)");
+    rlwe->generateKeys();
+    auto [a, b] = rlwe->getPublicKey();
+    
+    // 2. Client: Create secret and blind it
+    Logger::log("\n2. Client: Blinding Process");
+    std::vector<uint8_t> secret = {0xDE, 0xAD, 0xBE, 0xEF};
+    Logger::log("Client secret: 0xDEADBEEF");
+    
+    Logger::log("Computing blinded message...");
+    auto [blindedMessage, blindingFactor] = rlwe->computeBlindedMessage(secret);
+    
+    // 3. Server: Generate blind signature
+    Logger::log("\n3. Server: Blind Signing");
+    Polynomial blindSignature = rlwe->blindSign(blindedMessage);
+    
+    // 4. Client: Unblind the signature
+    Logger::log("\n4. Client: Unblinding");
+    Polynomial signature = rlwe->computeSignature(blindSignature, blindingFactor, b);
+    
+    // 5. Server: Verify the signature against a secret
+    Logger::log("\n5. Server: Verification");
+    bool verified = rlwe->verify(secret, signature);
+    Logger::log("Verification result: " + std::string(verified ? "SUCCESS" : "FAILED"));
+    EXPECT_TRUE(verified) << "Valid signature failed to verify with KYBER512 parameters";
+    
+    // 6. Verify fails with wrong secret
+    Logger::log("\n6. Testing Wrong Secret");
+    std::vector<uint8_t> wrong_secret = {0xDE, 0xAD, 0xBE, 0xEE};
+    bool wrong_verify = rlwe->verify(wrong_secret, signature);
+    EXPECT_FALSE(wrong_verify) << "Signature incorrectly verified with wrong secret";
 }

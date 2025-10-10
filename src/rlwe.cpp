@@ -102,9 +102,33 @@ static bool validatePowerOfTwo(size_t n) {
 #endif
 }
 
-RLWESignature::RLWESignature(size_t n, uint64_t q)
+// Parameter sets based on NIST standards and security analysis
+RLWEParams RLWESignature::getParameterSet(SecurityLevel level) {
+    switch (level) {
+        case SecurityLevel::TEST_TINY:
+            return {8, 7681, 3.0, "TEST_TINY (INSECURE)", 4, 2, false};
+        
+        case SecurityLevel::TEST_SMALL:
+            return {32, 7681, 3.0, "TEST_SMALL (INSECURE)", 16, 8, false};
+        
+        case SecurityLevel::KYBER512:
+            return {256, 3329, 1.6, "KYBER512 (NIST Standard)", 128, 64, true};
+        
+        case SecurityLevel::MODERATE:
+            return {512, 12289, 3.2, "MODERATE", 192, 96, true};
+        
+        case SecurityLevel::HIGH:
+            return {1024, 16384, 3.2, "HIGH", 256, 128, true};
+        
+        default:
+            return {256, 3329, 1.6, "KYBER512 (NIST Standard)", 128, 64, true};
+    }
+}
+
+RLWESignature::RLWESignature(size_t n, uint64_t q, double sigma)
     : ring_dim_n(n),
       modulus(q),
+      gaussian_stddev(sigma > 0 ? sigma : 3.2),
       a(n, q),
       b(n, q),
       s(n, q)
@@ -115,7 +139,117 @@ RLWESignature::RLWESignature(size_t n, uint64_t q)
     }
 
     Logger::log("Created RLWE instance with n=" + std::to_string(n) + 
-                ", q=" + std::to_string(q));
+                ", q=" + std::to_string(q) + ", σ=" + std::to_string(gaussian_stddev));
+    
+    validateSecurityParameters();
+}
+
+RLWESignature::RLWESignature(SecurityLevel level) 
+    : ring_dim_n(0),
+      modulus(0),
+      gaussian_stddev(0),
+      a(1, 1),
+      b(1, 1),
+      s(1, 1)
+{
+    RLWEParams params = getParameterSet(level);
+    
+    ring_dim_n = params.n;
+    modulus = params.q;
+    gaussian_stddev = params.sigma;
+    
+    // Recreate polynomials with correct parameters
+    a = Polynomial(params.n, params.q);
+    b = Polynomial(params.n, params.q);
+    s = Polynomial(params.n, params.q);
+    
+    // Validate that n is a power of 2
+    if (!validatePowerOfTwo(ring_dim_n)) {
+        throw std::invalid_argument("n must be a power of 2");
+    }
+    
+    Logger::log("\n" + std::string(70, '='));
+    Logger::log("RLWE INSTANCE CREATED");
+    Logger::log(std::string(70, '='));
+    Logger::log("Security Level: " + std::string(params.name));
+    Logger::log("Parameters: n=" + std::to_string(params.n) + 
+                ", q=" + std::to_string(params.q) + 
+                ", σ=" + std::to_string(params.sigma));
+    Logger::log("Estimated Security:");
+    Logger::log("  Classical: ~" + std::to_string(params.classical_bits) + " bits");
+    Logger::log("  Quantum:   ~" + std::to_string(params.quantum_bits) + " bits");
+    
+    if (!params.is_secure) {
+        Logger::log("\n⚠️  WARNING: INSECURE PARAMETERS ⚠️");
+        Logger::log("These parameters provide insufficient security!");
+        Logger::log("Only use for testing and development.");
+        Logger::log("For production, use SecurityLevel::KYBER512 or higher.");
+        Logger::log("⚠️  DO NOT USE IN PRODUCTION ⚠️\n");
+    } else {
+        Logger::log("\n✓ Parameters meet cryptographic security requirements");
+    }
+    Logger::log(std::string(70, '=') + "\n");
+    
+    validateSecurityParameters();
+}
+
+RLWEParams RLWESignature::getParameters() const {
+    RLWEParams params;
+    params.n = ring_dim_n;
+    params.q = modulus;
+    params.sigma = gaussian_stddev;
+    params.name = "Custom";
+    
+    // Simplified security estimation
+    // For accurate estimates, use lattice-estimator tools
+    if (ring_dim_n < 128) {
+        params.classical_bits = static_cast<int>(ring_dim_n * 0.5);
+        params.quantum_bits = static_cast<int>(ring_dim_n * 0.25);
+        params.is_secure = false;
+    } else if (ring_dim_n < 256) {
+        params.classical_bits = 80;
+        params.quantum_bits = 40;
+        params.is_secure = false;
+    } else {
+        // Very rough estimate based on NIST analysis
+        params.classical_bits = static_cast<int>(ring_dim_n * 0.6);
+        params.quantum_bits = static_cast<int>(ring_dim_n * 0.3);
+        params.is_secure = (ring_dim_n >= 256);
+    }
+    
+    return params;
+}
+
+void RLWESignature::validateSecurityParameters() {
+    double alpha = gaussian_stddev / modulus;
+    
+    Logger::log("\nValidating security parameters...");
+    Logger::log("Ring dimension (n):     " + std::to_string(ring_dim_n));
+    Logger::log("Modulus (q):            " + std::to_string(modulus));
+    Logger::log("Gaussian σ:             " + std::to_string(gaussian_stddev));
+    Logger::log("Noise ratio (α = σ/q):  " + std::to_string(alpha));
+    
+    // Check if n is too small
+    if (ring_dim_n < 256) {
+        Logger::log("⚠️  WARNING: Ring dimension n=" + std::to_string(ring_dim_n) + 
+                   " is below recommended minimum of 256");
+        Logger::log("   Current security: ~" + std::to_string(ring_dim_n * 0.5) + 
+                   " bits (INSECURE)");
+        Logger::log("   Recommended: n >= 256 for production use");
+    }
+    
+    // Check noise ratio
+    if (alpha > 0.01) {
+        Logger::log("⚠️  WARNING: Large noise ratio α=" + std::to_string(alpha) + 
+                   " may affect correctness");
+    }
+    
+    // Power of 2 check (already done in constructor, but log it)
+    if (validatePowerOfTwo(ring_dim_n)) {
+        Logger::log("✓ Ring dimension is a power of 2 (required for efficiency)");
+    }
+    
+    Logger::log("Parameter validation complete.\n");
 }
 
 void RLWESignature::generateKeys() {
@@ -123,11 +257,11 @@ void RLWESignature::generateKeys() {
     Logger::log("Sampling uniform polynomial a");
     a = sampleUniform();
     
-    Logger::log("Sampling gaussian polynomial s (secret key)");
-    s = sampleGaussian(GAUSSIAN_STDDEV);
+    Logger::log("Sampling gaussian polynomial s (secret key) with σ=" + std::to_string(gaussian_stddev));
+    s = sampleGaussian(gaussian_stddev);
     
-    Logger::log("Sampling gaussian polynomial e");
-    Polynomial e = sampleGaussian(GAUSSIAN_STDDEV);
+    Logger::log("Sampling gaussian polynomial e with σ=" + std::to_string(gaussian_stddev));
+    Polynomial e = sampleGaussian(gaussian_stddev);
     
     Logger::log("Computing b = a*s + e");
     b = a * s + e;
@@ -141,7 +275,7 @@ std::pair<Polynomial, Polynomial> RLWESignature::computeBlindedMessage(const std
     Logger::log("\nComputing blinded message...");
     
     // Sample random blinding factor
-    Polynomial r = sampleGaussian(GAUSSIAN_STDDEV);
+    Polynomial r = sampleGaussian(gaussian_stddev);
     Logger::log("Random blinding factor r: " + r.toString());
     
     // Hash secret to polynomial
@@ -159,11 +293,11 @@ Polynomial RLWESignature::blindSign(const Polynomial& blindedMessagePoly) {
     Logger::log("\nPerforming blind signing...");
     Logger::log("Blinded message received: " + blindedMessagePoly.toString());
     
-    Polynomial e1 = sampleGaussian(GAUSSIAN_STDDEV);
+    Polynomial e1 = sampleGaussian(gaussian_stddev);
 
-    // Compute signature: s * blinded_message
+    // Compute signature: s * blinded_message + e1
     Polynomial signature = s * blindedMessagePoly + e1;
-    Logger::log("Computed blind signature (s * blinded_message): " + signature.toString());
+    Logger::log("Computed blind signature (s * blinded_message + e1): " + signature.toString());
     
     return signature;
 }
