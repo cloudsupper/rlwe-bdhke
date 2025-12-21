@@ -6,11 +6,11 @@
 class RLWETest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Use TEST_TINY for fast unit tests
-        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_TINY);
+        // Use TEST_SMALL for more realistic but still fast tests
+        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_SMALL);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
-        Logger::log("Test setup with TEST_TINY parameters (INSECURE - for testing only)");
+        Logger::log("Test setup with TEST_SMALL parameters (INSECURE - for testing only)");
     }
     
     void TearDown() override {
