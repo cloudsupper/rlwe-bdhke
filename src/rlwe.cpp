@@ -7,7 +7,6 @@
 #include <random>
 #include <sha256.h>
 
-// Platform-specific includes for secure random
 #if defined(_WIN32)
 #include <windows.h>
 #include <bcrypt.h>
@@ -17,7 +16,6 @@
 
 static void getSecureRandomBytes(uint8_t* buffer, size_t length) {
 #if defined(_WIN32)
-    // Windows: Use BCrypt
     BCRYPT_ALG_HANDLE hAlg = NULL;
     NTSTATUS status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_RNG_ALGORITHM, NULL, 0);
     if (!BCRYPT_SUCCESS(status)) {
@@ -31,12 +29,10 @@ static void getSecureRandomBytes(uint8_t* buffer, size_t length) {
         throw std::runtime_error("Failed to generate random bytes using BCrypt");
     }
 #elif defined(__APPLE__)
-    // macOS: Use SecRandomCopyBytes
     if (SecRandomCopyBytes(kSecRandomDefault, length, buffer) != 0) {
         throw std::runtime_error("Failed to generate random bytes using SecRandomCopyBytes");
     }
 #else
-    // Linux and other Unix-like systems: Use /dev/urandom
     std::random_device rd("/dev/urandom");
     if (!rd.entropy()) {
         throw std::runtime_error("Failed to access secure random source");
@@ -70,28 +66,23 @@ double RLWESignature::getRandomDouble() {
     return radius * std::cos(theta);
 }
 
-// Helper function to check if a number is a power of 2
 static bool isPowerOfTwo(size_t n) {
     return n != 0 && (n & (n - 1)) == 0;
 }
 
-// Helper function to validate power of 2 using compiler intrinsics
 static bool validatePowerOfTwo(size_t n) {
     if (!isPowerOfTwo(n)) {
         return false;
     }
 
-#if defined(_MSC_VER) // Microsoft Visual C++
+#if defined(_MSC_VER)
     unsigned long index;
-    // BitScanReverse works on unsigned long
     _BitScanReverse(&index, static_cast<unsigned long>(n));
     return (static_cast<size_t>(1) << index) == n;
-#elif defined(__GNUC__) || defined(__clang__) // GCC or Clang
-    // __builtin_popcountll works with unsigned long long (64-bit)
+#elif defined(__GNUC__) || defined(__clang__)
     unsigned long long n_ull = static_cast<unsigned long long>(n);
     return __builtin_popcountll(n_ull) == 1;
 #else
-    // Generic implementation: count the number of set bits
     size_t count = 0;
     size_t temp = n;
     while (temp > 0) {
@@ -102,7 +93,6 @@ static bool validatePowerOfTwo(size_t n) {
 #endif
 }
 
-// Parameter sets based on NIST standards and security analysis
 RLWEParams RLWESignature::getParameterSet(SecurityLevel level) {
     switch (level) {
         case SecurityLevel::TEST_TINY:
@@ -133,7 +123,6 @@ RLWESignature::RLWESignature(size_t n, uint64_t q, double sigma)
       b(n, q),
       s(n, q)
 {
-    // Validate that n is a power of 2 using the helper function
     if (!validatePowerOfTwo(n)) {
         throw std::invalid_argument("n must be a power of 2");
     }
@@ -158,12 +147,10 @@ RLWESignature::RLWESignature(SecurityLevel level)
     modulus = params.q;
     gaussian_stddev = params.sigma;
     
-    // Recreate polynomials with correct parameters
     a = Polynomial(params.n, params.q);
     b = Polynomial(params.n, params.q);
     s = Polynomial(params.n, params.q);
     
-    // Validate that n is a power of 2
     if (!validatePowerOfTwo(ring_dim_n)) {
         throw std::invalid_argument("n must be a power of 2");
     }
@@ -200,8 +187,6 @@ RLWEParams RLWESignature::getParameters() const {
     params.sigma = gaussian_stddev;
     params.name = "Custom";
     
-    // Simplified security estimation
-    // For accurate estimates, use lattice-estimator tools
     if (ring_dim_n < 128) {
         params.classical_bits = static_cast<int>(ring_dim_n * 0.5);
         params.quantum_bits = static_cast<int>(ring_dim_n * 0.25);
@@ -211,7 +196,6 @@ RLWEParams RLWESignature::getParameters() const {
         params.quantum_bits = 40;
         params.is_secure = false;
     } else {
-        // Very rough estimate based on NIST analysis
         params.classical_bits = static_cast<int>(ring_dim_n * 0.6);
         params.quantum_bits = static_cast<int>(ring_dim_n * 0.3);
         params.is_secure = (ring_dim_n >= 256);
@@ -229,7 +213,6 @@ void RLWESignature::validateSecurityParameters() {
     Logger::log("Gaussian σ:             " + std::to_string(gaussian_stddev));
     Logger::log("Noise ratio (α = σ/q):  " + std::to_string(alpha));
     
-    // Check if n is too small
     if (ring_dim_n < 256) {
         Logger::log("⚠️  WARNING: Ring dimension n=" + std::to_string(ring_dim_n) + 
                    " is below recommended minimum of 256");
@@ -238,13 +221,11 @@ void RLWESignature::validateSecurityParameters() {
         Logger::log("   Recommended: n >= 256 for production use");
     }
     
-    // Check noise ratio
     if (alpha > 0.01) {
         Logger::log("⚠️  WARNING: Large noise ratio α=" + std::to_string(alpha) + 
                    " may affect correctness");
     }
     
-    // Power of 2 check (already done in constructor, but log it)
     if (validatePowerOfTwo(ring_dim_n)) {
         Logger::log("✓ Ring dimension is a power of 2 (required for efficiency)");
     }
@@ -254,10 +235,7 @@ void RLWESignature::validateSecurityParameters() {
 
 void RLWESignature::generateKeys() {
     Logger::log("\nGenerating keys...");
-    Logger::log("Sampling uniform polynomial a");
     a = sampleUniform();
-    
-    Logger::log("Sampling gaussian polynomial s (secret key) with σ=" + std::to_string(gaussian_stddev));
     s = sampleGaussian(gaussian_stddev);
     
     Logger::log("Sampling gaussian polynomial e with σ=" + std::to_string(gaussian_stddev));
@@ -274,15 +252,12 @@ void RLWESignature::generateKeys() {
 std::pair<Polynomial, Polynomial> RLWESignature::computeBlindedMessage(const std::vector<uint8_t>& secret) {
     Logger::log("\nComputing blinded message...");
     
-    // Sample random blinding factor
     Polynomial r = sampleGaussian(gaussian_stddev);
     Logger::log("Random blinding factor r: " + r.toString());
     
-    // Hash secret to polynomial
     Polynomial Y = hashToPolynomial(secret);
     Logger::log("Hashed secret Y: " + Y.toString());
     
-    // Compute blinded message: Y + a*r    
     Polynomial blindedMessage = Y + a * r;
     Logger::log("Blinded message (Y + a*r): " + blindedMessage.toString());
     
@@ -295,7 +270,6 @@ Polynomial RLWESignature::blindSign(const Polynomial& blindedMessagePoly) {
     
     Polynomial e1 = sampleGaussian(gaussian_stddev);
 
-    // Compute signature: s * blinded_message + e1
     Polynomial signature = s * blindedMessagePoly + e1;
     Logger::log("Computed blind signature (s * blinded_message + e1): " + signature.toString());
     
@@ -308,22 +282,18 @@ bool RLWESignature::verify(const std::vector<uint8_t>& message,
     logMessageBytes("Message", message);
     Logger::log("Signature to verify: " + signature.toString());
     
-    // Hash message to polynomial
     Polynomial z = hashToPolynomial(message);
     Logger::log("Hashed message z: " + z.toString());
     
-    // Expected value: s * z
     Polynomial expected = s * z;
     Logger::log("Expected value (s*z): " + expected.toString());
 
-    // Round both polynomials to binary signals (0 or q/2)
     Polynomial actual_signal = signature.polySignal();
     Polynomial expected_signal = expected.polySignal();
     
     Logger::log("Rounded signature: " + actual_signal.toString());
     Logger::log("Rounded expected: " + expected_signal.toString());
 
-    // Compare the coefficients
     const auto& actual_coeffs = actual_signal.getCoeffs();
     const auto& expected_coeffs = expected_signal.getCoeffs();
     
@@ -383,11 +353,9 @@ Polynomial RLWESignature::sampleGaussian(double stddev) {
 Polynomial RLWESignature::messageToPolynomial(const std::vector<uint8_t>& message) {
     std::vector<uint64_t> coeffs(ring_dim_n, 0);
     
-    // Process each byte separately, starting from most significant bit
     size_t coeff_idx = 0;
     for (size_t byte_idx = 0; byte_idx < message.size() && coeff_idx < ring_dim_n; byte_idx++) {
         uint8_t byte = message[byte_idx];
-        // Process bits in MSB to LSB order
         for (int j = 7; j >= 0 && coeff_idx < ring_dim_n; j--) {
             coeffs[coeff_idx++] = (byte >> j) & 1;
         }
@@ -400,29 +368,19 @@ Polynomial RLWESignature::hashToPolynomial(const std::vector<uint8_t>& message) 
     Logger::log("\nConverting message to polynomial using counter-based hashing");
     logMessageBytes("Input message", message);
     
-    // Create a polynomial to hold the result
     std::vector<uint64_t> coeffs(ring_dim_n, 0);
         
-    // Process message in blocks using counter
     size_t coeff_idx = 0;
     uint32_t counter = 0;
     
     while (coeff_idx < ring_dim_n) {
-        // Prepare message block with counter
         std::vector<uint8_t> block;
         block.reserve(message.size() + sizeof(counter));
-        
-        // Add counter to the beginning of the block
         const uint8_t* counter_bytes = reinterpret_cast<const uint8_t*>(&counter);
         block.insert(block.end(), counter_bytes, counter_bytes + sizeof(counter));
-        
-        // Add original message
         block.insert(block.end(), message.begin(), message.end());
-        
         Logger::log("Block " + std::to_string(counter) + " content:");
         logMessageBytes("  ", block);
-        
-        // Hash the block
         std::vector<uint8_t> hash = SHA256::hash(block);
         std::stringstream ss;
         ss << "Block " << counter << " hash: ";
@@ -431,7 +389,6 @@ Polynomial RLWESignature::hashToPolynomial(const std::vector<uint8_t>& message) 
         }
         Logger::log(ss.str());
 
-        // Convert hash bits to coefficients
         for (size_t byte_idx = 0; coeff_idx < ring_dim_n && byte_idx < hash.size(); byte_idx++) {
             for (int bit = 7; bit >= 0 && coeff_idx < ring_dim_n; bit--) {
                 bool bit_value = (hash[byte_idx] >> bit) & 1;

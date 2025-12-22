@@ -4,7 +4,6 @@
 #include <iomanip>
 
 int main() {
-    // Disable verbose logging for cleaner demo output
     Logger::enable_logging = false;
     
     std::cout << "\n";
@@ -12,7 +11,6 @@ int main() {
     std::cout << "    RLWE Blind Signature Demo - NIST KYBER512 Parameters\n";
     std::cout << "======================================================================\n\n";
     
-    // Create RLWE instance with KYBER512 parameters (NIST standard, secure)
     std::cout << "Creating RLWE instance with KYBER512 parameters...\n";
     RLWESignature rlwe(SecurityLevel::KYBER512);
     
@@ -24,13 +22,11 @@ int main() {
     std::cout << "  Quantum security:       ~" << params.quantum_bits << " bits\n";
     std::cout << "  Security status:        " << (params.is_secure ? "✓ SECURE" : "⚠️  INSECURE") << "\n\n";
     
-    // Generate keys
     std::cout << "Generating keys...\n";
     rlwe.generateKeys();
     auto [a, b] = rlwe.getPublicKey();
     std::cout << "  ✓ Keys generated successfully\n\n";
     
-    // Client: Create a secret and blind it
     std::cout << "CLIENT: Creating and blinding secret...\n";
     std::vector<uint8_t> secret = {0xDE, 0xAD, 0xBE, 0xEF};
     std::cout << "  Secret: 0xDEADBEEF\n";
@@ -38,23 +34,19 @@ int main() {
     auto [blindedMessage, blindingFactor] = rlwe.computeBlindedMessage(secret);
     std::cout << "  ✓ Message blinded\n\n";
     
-    // Server: Generate blind signature
     std::cout << "SERVER: Generating blind signature...\n";
     Polynomial blindSignature = rlwe.blindSign(blindedMessage);
     std::cout << "  ✓ Blind signature generated\n\n";
     
-    // Client: Unblind the signature
     std::cout << "CLIENT: Unblinding signature...\n";
     Polynomial signature = rlwe.computeSignature(blindSignature, blindingFactor, b);
     std::cout << "  ✓ Signature unblinded\n\n";
     
-    // Server: Verify the signature
     std::cout << "SERVER: Verifying signature...\n";
     bool verified = rlwe.verify(secret, signature);
     std::cout << "  " << (verified ? "✓" : "✗") << " Verification: " 
               << (verified ? "SUCCESS" : "FAILED") << "\n\n";
     
-    // Test with wrong secret
     std::cout << "SERVER: Testing with wrong secret...\n";
     std::vector<uint8_t> wrong_secret = {0xDE, 0xAD, 0xBE, 0xEE};
     std::cout << "  Wrong secret: 0xDEADBEEE\n";
@@ -66,7 +58,6 @@ int main() {
     std::cout << "  Demo completed successfully!\n";
     std::cout << "======================================================================\n\n";
     
-    // Show comparison of different security levels
     std::cout << "\n";
     std::cout << "======================================================================\n";
     std::cout << "    Available Security Levels\n";

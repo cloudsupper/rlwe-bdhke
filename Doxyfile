@@ -1,0 +1,77 @@
+# Doxyfile for rlwe-blind-exchange
+
+#---------------------------------------------------------------------
+# Project related configuration options
+#---------------------------------------------------------------------
+PROJECT_NAME           = "RLWE Blind Signature"
+PROJECT_BRIEF          = "RLWE-based blind signature and supporting primitives"
+PROJECT_NUMBER         = 
+
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = NO
+
+#---------------------------------------------------------------------
+# Build configuration
+#---------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+
+#---------------------------------------------------------------------
+# Input
+#---------------------------------------------------------------------
+INPUT                  = include src
+FILE_PATTERNS          = *.h \
+                         *.hpp \
+                         *.cpp
+RECURSIVE              = YES
+
+EXCLUDE                = build
+
+# Treat headers as C++
+EXTENSION_MAPPING      = h=C++
+
+#---------------------------------------------------------------------
+# Source browser & references
+#---------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+
+#---------------------------------------------------------------------
+# HTML output
+#---------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+
+#---------------------------------------------------------------------
+# LaTeX / other formats (disabled by default)
+#---------------------------------------------------------------------
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_MAN           = NO
+GENERATE_XML           = NO
+
+#---------------------------------------------------------------------
+# Diagrams (optional)
+#---------------------------------------------------------------------
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 2
+CLASS_DIAGRAMS         = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+DOT_TRANSPARENT        = YES

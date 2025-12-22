@@ -1,14 +1,12 @@
 #include <polynomial.h>
 #include <stdexcept>
 
-// Implementation of polySignal
 Polynomial Polynomial::polySignal() const {
     Polynomial result(ring_dim, modulus);
     uint64_t half_mod = modulus / 2;
     
     for (size_t i = 0; i < ring_dim; i++) {
         uint64_t coeff = coeffs[i];
-        // Determine if coefficient is closer to 0 or q/2 in cyclic group
         uint64_t dist_to_zero = std::min(coeff, modulus - coeff);
         uint64_t dist_to_half = std::min(
             (coeff >= half_mod) ? coeff - half_mod : half_mod - coeff,
@@ -74,10 +72,8 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
 
     Logger::log("Multiplying polynomials:\n  " + toString() + "\n  " + other.toString());
 
-    // Create temporary vector for the result with double size
     std::vector<uint64_t> temp(2 * ring_dim, 0);
 
-    // Perform polynomial multiplication
     for (size_t i = 0; i < ring_dim; i++) {
         for (size_t j = 0; j < ring_dim; j++) {
             uint64_t prod = (static_cast<uint64_t>(coeffs[i]) * 
@@ -88,14 +84,9 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
 
     Logger::log("Intermediate multiplication result:\n  " + 
                 Logger::vectorToString(temp, "  temp = "));
-
-    // Reduce modulo x^n + 1
     Polynomial result(ring_dim, modulus);
     for (size_t i = 0; i < ring_dim; i++) {
-        // Start with the regular coefficient
         result[i] = temp[i];
-        
-        // Subtract corresponding coefficient from higher degree when reducing mod x^n + 1
         size_t higher_degree = i + ring_dim;
         while (higher_degree < temp.size()) {
             result[i] = mod(static_cast<int64_t>(result[i]) - 
