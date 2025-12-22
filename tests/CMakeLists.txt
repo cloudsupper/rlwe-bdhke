@@ -12,6 +12,7 @@ add_executable(rlwe_tests
     rlwe_test.cpp
     polynomial_test.cpp
     sha256_test.cpp
+    ntt_test.cpp
 )
 
 # Link against Google Test and our library
