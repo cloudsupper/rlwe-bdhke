@@ -102,16 +102,16 @@ RLWEParams RLWESignature::getParameterSet(SecurityLevel level) {
             return {32, 7681, 3.0, "TEST_SMALL (INSECURE)", 16, 8, false};
         
         case SecurityLevel::KYBER512:
-            return {256, 3329, 1.6, "KYBER512 (NIST Standard)", 128, 64, true};
+            return {256, 7681, 3.0, "KYBER512-like (NTT-friendly)", 128, 64, true};
         
         case SecurityLevel::MODERATE:
             return {512, 12289, 3.2, "MODERATE", 192, 96, true};
         
         case SecurityLevel::HIGH:
-            return {1024, 16384, 3.2, "HIGH", 256, 128, true};
+            return {1024, 18433, 3.2, "HIGH", 256, 128, true};
         
         default:
-            return {256, 3329, 1.6, "KYBER512 (NIST Standard)", 128, 64, true};
+            return {256, 7681, 3.0, "KYBER512-like (NTT-friendly)", 128, 64, true};
     }
 }
 

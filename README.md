@@ -4,7 +4,7 @@ This project implements a Ring Learning With Errors (RLWE) based blind exchange 
 
 ## ⚠️ Security Notice
 
-**Default parameters are now set to KYBER512 (NIST standard)** providing ~128 bits of classical security.
+**Default parameters are now set to a KYBER512-like, NTT-friendly parameter set** providing ~128 bits of classical security.
 
 The previous test parameters (n=8, n=32) are **INSECURE** and only suitable for development/testing. They are still available via `SecurityLevel::TEST_TINY` and `SecurityLevel::TEST_SMALL` for fast unit tests.
 
@@ -12,9 +12,9 @@ The previous test parameters (n=8, n=32) are **INSECURE** and only suitable for 
 
 | Level | n | q | σ | Classical | Quantum | Status |
 |-------|---|---|---|-----------|---------|---------|
-| **KYBER512** (default) | 256 | 3329 | 1.6 | ~128 bits | ~64 bits | ✅ SECURE |
+| **KYBER512-like (default)** | 256 | 7681 | 3.0 | ~128 bits | ~64 bits | ✅ SECURE |
 | **MODERATE** | 512 | 12289 | 3.2 | ~192 bits | ~96 bits | ✅ SECURE |
-| **HIGH** | 1024 | 16384 | 3.2 | ~256 bits | ~128 bits | ✅ SECURE |
+| **HIGH** | 1024 | 18433 | 3.2 | ~256 bits | ~128 bits | ✅ SECURE |
 | TEST_TINY | 8 | 7681 | 3.0 | ~4 bits | ~2 bits | ⚠️ INSECURE |
 | TEST_SMALL | 32 | 7681 | 3.0 | ~16 bits | ~8 bits | ⚠️ INSECURE |
 
@@ -52,7 +52,7 @@ bool verified = rlwe.verify(secret, signature);  // Should be true
 
 ```cpp
 // For different security levels:
-RLWESignature rlwe_kyber(SecurityLevel::KYBER512);    // 128-bit security (NIST standard)
+RLWESignature rlwe_kyber(SecurityLevel::KYBER512);    // 128-bit security (Kyber-like, NTT-friendly)
 RLWESignature rlwe_moderate(SecurityLevel::MODERATE);  // 192-bit security
 RLWESignature rlwe_high(SecurityLevel::HIGH);          // 256-bit security
 

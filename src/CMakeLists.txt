@@ -2,6 +2,7 @@
 add_library(rlwe
     rlwe.cpp
     polynomial.cpp
+    ntt.cpp
     sha256.cpp
 )
 

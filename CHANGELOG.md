@@ -19,14 +19,14 @@ enum class SecurityLevel {
     // INSECURE - Only for testing/development
     TEST_TINY,       // n=8,   q=7681,  σ=3.0  - ~4 bits security
     TEST_SMALL,      // n=32,  q=7681,  σ=3.0  - ~16 bits security
-    
-    // SECURE - Production parameters based on NIST standards
-    KYBER512,        // n=256, q=3329,  σ=1.6  - ~128 bits classical
-    MODERATE,        // n=512, q=12289, σ=3.2  - ~192 bits classical
-    HIGH,            // n=1024,q=16384, σ=3.2  - ~256 bits classical
-};
-```
+- Add support for named security levels:
 
+```cpp
+enum class SecurityLevel {
+    KYBER512,        // n=256, q=7681,  σ=3.0  - ~128 bits classical (Kyber-like, NTT-friendly)
+    MODERATE,        // n=512, q=12289, σ=3.2  - ~192 bits classical
+    HIGH,            // n=1024,q=18433, σ=3.2  - ~256 bits classical (NTT-friendly)
+};
 #### Added RLWEParams Struct
 
 ```cpp
@@ -125,9 +125,9 @@ RLWESignature rlwe(SecurityLevel::KYBER512);
 RLWESignature rlwe(SecurityLevel::TEST_TINY);  // Same as old n=8
 
 // Option 4: Custom parameters (advanced)
-RLWESignature rlwe(256, 3329, 1.6);  // n, q, sigma
-```
 
+```cpp
+ RLWESignature rlwe(256, 7681, 3.0);  // n, q, sigma (Kyber-like, NTT-friendly)
 ### For Tests
 
 #### Old Way
@@ -153,8 +153,8 @@ RLWESignature rlwe(SecurityLevel::KYBER512);
 ## Parameter Comparison
 
 | Configuration | Old Default | New Default |
-|--------------|-------------|-------------|
-| Ring Dimension (n) | 8 | 256 |
+|-----------|------|------|---------|
+| Modulus (q) | 7681 | 7681 |
 | Modulus (q) | 7681 | 3329 |
 | Gaussian σ | 3.0 | 1.6 |
 | Classical Security | ~4 bits | ~128 bits |
@@ -170,8 +170,9 @@ RLWESignature rlwe(SecurityLevel::KYBER512);
 - Security: ~4 bits (trivially breakable)
 - Could be broken in **seconds** on a laptop
 
-### After
+
 - Default parameters: n=256, q=3329, σ=1.6 (KYBER512)
+→ Updated to: n=256, q=7681, σ=3.0 (KYBER512-like, NTT-friendly)
 - Security: ~128 bits classical, ~64 bits quantum
 - Based on **NIST standard**
 - Computationally infeasible to break
