@@ -8,6 +8,7 @@
 
 #include <logging.h>
 #include <polynomial.h>
+#include <ntt_tables.h>
 
 /**
  * @brief Number Theoretic Transform for Z_q[x]/(x^n + 1).
@@ -87,12 +88,9 @@ private:
     std::uint64_t omega_inv_;  ///< inverse of omega
     std::uint64_t n_inv_;      ///< modular inverse of n modulo q
 
-    // When negacyclic_ == true we additionally use a primitive 2n‑th root
-    // psi with psi^2 = omega and psi^n = -1 (mod q).
-    std::uint64_t psi_;        ///< primitive 2n‑th root (only for negacyclic)
-    std::uint64_t psi_inv_;
-    std::vector<std::uint64_t> psi_powers_;      ///< psi^{2i+1}
-    std::vector<std::uint64_t> psi_powers_inv_;  ///< psi^{-(2i+1)}
+    // Precomputed negacyclic twist tables psi^{2i+1} and psi^{-(2i+1)}
+    const std::uint64_t* psi_powers_;      ///< psi^{2i+1}
+    const std::uint64_t* psi_powers_inv_;  ///< psi^{-(2i+1)}
 
     // Utility helpers
     static bool isPowerOfTwo(std::size_t n);
@@ -130,15 +128,9 @@ private:
 
     static std::uint64_t modInverse(std::uint64_t a, std::uint64_t m);
 
-    /**
-     * @brief Return a precomputed primitive 2n‑th root of unity psi for
-     *        supported (n, q) pairs. The value satisfies psi^n = -1 (mod q).
-     */
-    static std::uint64_t getPrecomputedPsi(std::size_t n, std::uint64_t q);
-
     void bitReverse(std::vector<std::uint64_t>& a) const;
 
     void ntt(std::vector<std::uint64_t>& a, bool inverse) const;
 };
-
+ 
 #endif // NTT_H
