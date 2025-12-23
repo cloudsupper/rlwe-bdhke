@@ -12,8 +12,7 @@ int main() {
     std::cout << "======================================================================\n\n";
     
     std::cout << "Creating RLWE instance with KYBER512 parameters...\n";
-    RLWESignature rlwe(SecurityLevel::KYBER512);
-    
+    BlindKEM rlwe(SecurityLevel::KYBER512);
     auto params = rlwe.getParameters();
     std::cout << "  Ring dimension (n):     " << params.n << "\n";
     std::cout << "  Modulus (q):            " << params.q << "\n";
@@ -75,7 +74,7 @@ int main() {
     std::cout << "----------------------------------------------------------------------\n";
     
     for (auto level : levels) {
-        auto p = RLWESignature::getParameterSet(level);
+        auto p = BlindKEM::getParameterSet(level);
         std::cout << std::left << std::setw(16) << p.name 
                   << std::right << std::setw(6) << p.n 
                   << std::setw(8) << p.q

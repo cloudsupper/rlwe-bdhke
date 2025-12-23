@@ -85,7 +85,7 @@ struct RLWEParams {
  * over the ring @f$Z_q[x]/(x^n + 1)@f$. It supports key generation,
  * message blinding, blind signing, and verification.
  */
-class RLWESignature {
+class BlindKEM {
 public:
     /**
      * @brief Construct an RLWE instance with explicit parameters.
@@ -98,7 +98,7 @@ public:
      *
      * @throws std::invalid_argument If @p n is not a power of two.
      */
-    RLWESignature(size_t n, uint64_t q, double sigma = 0.0);
+    BlindKEM(size_t n, uint64_t q, double sigma = 0.0);
 
     /**
      * @brief Construct an RLWE instance from a named security level.
@@ -112,7 +112,7 @@ public:
      * @throws std::invalid_argument If the derived ring dimension is
      *         not a power of two.
      */
-    explicit RLWESignature(SecurityLevel level = SecurityLevel::KYBER512);
+    explicit BlindKEM(SecurityLevel level = SecurityLevel::KYBER512);
 
     /**
      * @brief Generate a fresh key pair.

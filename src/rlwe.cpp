@@ -46,13 +46,13 @@ static void getSecureRandomBytes(uint8_t* buffer, size_t length) {
 #endif
 }
 
-uint64_t RLWESignature::getRandomUint64() {
+uint64_t BlindKEM::getRandomUint64() {
     uint64_t result;
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&result), sizeof(result));
     return result;
 }
 
-double RLWESignature::getRandomDouble() {
+double BlindKEM::getRandomDouble() {
     uint64_t r1, r2;
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&r1), sizeof(r1));
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&r2), sizeof(r2));
@@ -93,7 +93,7 @@ static bool validatePowerOfTwo(size_t n) {
 #endif
 }
 
-RLWEParams RLWESignature::getParameterSet(SecurityLevel level) {
+RLWEParams BlindKEM::getParameterSet(SecurityLevel level) {
     switch (level) {
         case SecurityLevel::TEST_TINY:
             return {8, 7681, 3.0, "TEST_TINY (INSECURE)", 4, 2, false};
@@ -115,7 +115,7 @@ RLWEParams RLWESignature::getParameterSet(SecurityLevel level) {
     }
 }
 
-RLWESignature::RLWESignature(size_t n, uint64_t q, double sigma)
+BlindKEM::BlindKEM(size_t n, uint64_t q, double sigma)
     : ring_dim_n(n),
       modulus(q),
       gaussian_stddev(sigma > 0 ? sigma : 3.2),
@@ -133,7 +133,7 @@ RLWESignature::RLWESignature(size_t n, uint64_t q, double sigma)
     validateSecurityParameters();
 }
 
-RLWESignature::RLWESignature(SecurityLevel level) 
+BlindKEM::BlindKEM(SecurityLevel level) 
     : ring_dim_n(0),
       modulus(0),
       gaussian_stddev(0),
@@ -180,7 +180,7 @@ RLWESignature::RLWESignature(SecurityLevel level)
     validateSecurityParameters();
 }
 
-RLWEParams RLWESignature::getParameters() const {
+RLWEParams BlindKEM::getParameters() const {
     RLWEParams params;
     params.n = ring_dim_n;
     params.q = modulus;
@@ -204,7 +204,7 @@ RLWEParams RLWESignature::getParameters() const {
     return params;
 }
 
-void RLWESignature::validateSecurityParameters() {
+void BlindKEM::validateSecurityParameters() {
     double alpha = gaussian_stddev / modulus;
     
     Logger::log("\nValidating security parameters...");
@@ -233,7 +233,7 @@ void RLWESignature::validateSecurityParameters() {
     Logger::log("Parameter validation complete.\n");
 }
 
-void RLWESignature::generateKeys() {
+void BlindKEM::generateKeys() {
     Logger::log("\nGenerating keys...");
     a = sampleUniform();
     s = sampleGaussian(gaussian_stddev);
@@ -249,7 +249,7 @@ void RLWESignature::generateKeys() {
     Logger::log("Secret key s: " + s.toString());
 }
 
-std::pair<Polynomial, Polynomial> RLWESignature::computeBlindedMessage(const std::vector<uint8_t>& secret) {
+std::pair<Polynomial, Polynomial> BlindKEM::computeBlindedMessage(const std::vector<uint8_t>& secret) {
     Logger::log("\nComputing blinded message...");
     
     Polynomial r = sampleGaussian(gaussian_stddev);
@@ -264,7 +264,7 @@ std::pair<Polynomial, Polynomial> RLWESignature::computeBlindedMessage(const std
     return std::make_pair(blindedMessage, r);
 }
 
-Polynomial RLWESignature::blindSign(const Polynomial& blindedMessagePoly) {
+Polynomial BlindKEM::blindSign(const Polynomial& blindedMessagePoly) {
     Logger::log("\nPerforming blind signing...");
     Logger::log("Blinded message received: " + blindedMessagePoly.toString());
     
@@ -276,7 +276,7 @@ Polynomial RLWESignature::blindSign(const Polynomial& blindedMessagePoly) {
     return signature;
 }
 
-bool RLWESignature::verify(const std::vector<uint8_t>& message,
+bool BlindKEM::verify(const std::vector<uint8_t>& message,
                           const Polynomial& signature) {
     Logger::log("\nVerifying signature...");
     logMessageBytes("Message", message);
@@ -312,7 +312,7 @@ bool RLWESignature::verify(const std::vector<uint8_t>& message,
     return result;
 }
 
-Polynomial RLWESignature::computeSignature(
+Polynomial BlindKEM::computeSignature(
     const Polynomial& blindSignature,
     const Polynomial& blindingFactor,
     const Polynomial& publicKey
@@ -323,7 +323,7 @@ Polynomial RLWESignature::computeSignature(
     return C_ - r*A;
 }
 
-Polynomial RLWESignature::sampleUniform() {
+Polynomial BlindKEM::sampleUniform() {
     std::vector<uint64_t> coeffs(ring_dim_n);
     
     for (size_t i = 0; i < ring_dim_n; i++) {
@@ -333,7 +333,7 @@ Polynomial RLWESignature::sampleUniform() {
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial RLWESignature::sampleGaussian(double stddev) {
+Polynomial BlindKEM::sampleGaussian(double stddev) {
     std::vector<uint64_t> coeffs(ring_dim_n);
     
     for (size_t i = 0; i < ring_dim_n; i++) {
@@ -350,7 +350,7 @@ Polynomial RLWESignature::sampleGaussian(double stddev) {
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial RLWESignature::messageToPolynomial(const std::vector<uint8_t>& message) {
+Polynomial BlindKEM::messageToPolynomial(const std::vector<uint8_t>& message) {
     std::vector<uint64_t> coeffs(ring_dim_n, 0);
     
     size_t coeff_idx = 0;
@@ -364,7 +364,7 @@ Polynomial RLWESignature::messageToPolynomial(const std::vector<uint8_t>& messag
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial RLWESignature::hashToPolynomial(const std::vector<uint8_t>& message) {
+Polynomial BlindKEM::hashToPolynomial(const std::vector<uint8_t>& message) {
     Logger::log("\nConverting message to polynomial using counter-based hashing");
     logMessageBytes("Input message", message);
     

@@ -10,8 +10,8 @@ This project implements a Ring Learning With Errors (RLWE) based blind exchange 
 #include <rlwe.h>
 
 // Create instance with KYBER512 parameters (default, secure)
-RLWESignature rlwe;  // or explicitly: RLWESignature rlwe(SecurityLevel::KYBER512);
-
+```cpp
+BlindKEM rlwe;  // or explicitly: BlindKEM rlwe(SecurityLevel::KYBER512);
 // Generate keys
 rlwe.generateKeys();
 auto [a, b] = rlwe.getPublicKey();
@@ -34,20 +34,20 @@ bool verified = rlwe.verify(secret, signature);  // Should be true
 
 ```cpp
 // For different security levels:
-RLWESignature rlwe_kyber(SecurityLevel::KYBER512);    // 128-bit security (Kyber-like, NTT-friendly)
-RLWESignature rlwe_moderate(SecurityLevel::MODERATE);  // 192-bit security
-RLWESignature rlwe_high(SecurityLevel::HIGH);          // 256-bit security
-
+```cpp
+BlindKEM rlwe_kyber(SecurityLevel::KYBER512);    // 128-bit security (Kyber-like, NTT-friendly)
+BlindKEM rlwe_moderate(SecurityLevel::MODERATE);  // 192-bit security
+BlindKEM rlwe_high(SecurityLevel::HIGH);          // 256-bit security
 // For testing only (INSECURE):
-RLWESignature rlwe_test(SecurityLevel::TEST_TINY);     // Fast but insecure
+BlindKEM rlwe_test(SecurityLevel::TEST_TINY);     // Fast but insecure
 ```
 
 ### Custom Parameters
 
 ```cpp
 // Advanced: Use custom parameters (not recommended unless you know what you're doing)
-RLWESignature rlwe(512, 12289, 3.2);  // n, q, sigma
-```
+```cpp
+BlindKEM rlwe(512, 12289, 3.2);  // n, q, sigma
 
 ## Overview
 

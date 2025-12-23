@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
 #include "rlwe.h"
 #include "logging.h"
-#include <iostream>
 
 class RLWETest : public ::testing::Test {
 protected:
     void SetUp() override {
-        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_SMALL);
+        rlwe = std::make_unique<BlindKEM>(SecurityLevel::TEST_SMALL);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
         Logger::log("Test setup with TEST_SMALL parameters (INSECURE - for testing only)");
@@ -16,13 +15,13 @@ protected:
         Logger::log("Test complete\n");
     }
 
-    std::unique_ptr<RLWESignature> rlwe;
+    std::unique_ptr<BlindKEM> rlwe;
 };
 
 class RLWELargeTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        rlwe = std::make_unique<RLWESignature>(SecurityLevel::TEST_SMALL);
+        rlwe = std::make_unique<BlindKEM>(SecurityLevel::TEST_SMALL);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
         Logger::log("Large polynomial test setup with TEST_SMALL parameters (INSECURE - for testing only)");
@@ -32,13 +31,13 @@ protected:
         Logger::log("Large polynomial test complete\n");
     }
 
-    std::unique_ptr<RLWESignature> rlwe;
+    std::unique_ptr<BlindKEM> rlwe;
 };
 
 class RLWESecureTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        rlwe = std::make_unique<RLWESignature>(SecurityLevel::KYBER512);
+        rlwe = std::make_unique<BlindKEM>(SecurityLevel::KYBER512);
         Logger::setOutputStream(std::cout);
         Logger::enable_logging = true;
         Logger::log("Secure parameter test setup with KYBER512 (NIST Standard)");
@@ -48,7 +47,7 @@ protected:
         Logger::log("Secure parameter test complete\n");
     }
 
-    std::unique_ptr<RLWESignature> rlwe;
+    std::unique_ptr<BlindKEM> rlwe;
 };
 
 TEST_F(RLWETest, KeyGeneration) {

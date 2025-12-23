@@ -47,16 +47,16 @@ struct RLWEParams {
 ```cpp
 // Defaults to KYBER512 (secure)
 RLWESignature rlwe;
-
-// Explicit security level
-RLWESignature rlwe(SecurityLevel::KYBER512);
+```cpp
+BlindKEM rlwe;
+BlindKEM rlwe(SecurityLevel::KYBER512);
 ```
 
 #### Legacy Constructor Still Available
 ```cpp
 // Custom parameters (advanced users)
-RLWESignature rlwe(size_t n, uint64_t q, double sigma = 0.0);
-```
+```cpp
+BlindKEM rlwe(size_t n, uint64_t q, double sigma = 0.0);
 
 ### 3. Parameter Validation
 
@@ -110,32 +110,32 @@ Added `validateSecurityParameters()` function that:
 
 #### Old Way (Insecure)
 ```cpp
-RLWESignature rlwe(8, 7681);  // n=8, q=7681
+BlindKEM rlwe(8, 7681);  // n=8, q=7681
 ```
 
 #### New Way (Secure)
 ```cpp
 // Option 1: Use default (KYBER512)
-RLWESignature rlwe;
-
+```cpp
+BlindKEM rlwe(n, q);
 // Option 2: Explicit security level
-RLWESignature rlwe(SecurityLevel::KYBER512);
-
-// Option 3: For testing only
-RLWESignature rlwe(SecurityLevel::TEST_TINY);  // Same as old n=8
+```cpp
+BlindKEM rlwe;
+BlindKEM rlwe(SecurityLevel::KYBER512);
+BlindKEM rlwe(SecurityLevel::TEST_TINY);  // Fast but insecure
 
 // Option 4: Custom parameters (advanced)
 
 ```cpp
- RLWESignature rlwe(256, 7681, 3.0);  // n, q, sigma (Kyber-like, NTT-friendly)
+ BlindKEM rlwe(256, 7681, 3.0);  // n, q, sigma (Kyber-like, NTT-friendly)
 ### For Tests
 
 #### Old Way
 ```cpp
 const size_t n = 8;
 const uint64_t q = 7681;
-RLWESignature rlwe(n, q);
-```
+```cpp
+BlindKEM rlwe(n, q);
 
 #### New Way
 ```cpp
@@ -196,13 +196,13 @@ RLWESignature rlwe(SecurityLevel::KYBER512);
 ## Backward Compatibility
 
 ### ✅ Maintained
-- Old constructor `RLWESignature(size_t n, uint64_t q)` still works (with added sigma parameter)
+- Old constructor `BlindKEM(size_t n, uint64_t q)` still works (with added sigma parameter)
 - All existing methods unchanged
 - Test suite passes without modifications (using explicit `SecurityLevel`)
 
 ### ⚠️ Breaking Changes
 - Default constructor now creates KYBER512 instead of requiring parameters
-- Code using `RLWESignature(8, 7681)` will get warnings about insecurity
+- Code using `BlindKEM(8, 7681)` will get warnings about insecurity
 - Tests need to use `SecurityLevel` enum or get params dynamically
 
 ---

@@ -4,6 +4,7 @@
 #include <polynomial.h>
 
 #include <random>
+#include <vector>
 
 namespace {
 
@@ -81,14 +82,18 @@ static void check_ntt_multiply_matches_schoolbook(const RLWEParams& params,
 } // namespace
 
 TEST(PolynomialNTTMultiplyTest, AllSecurityLevelsMatchSchoolbook) {
-    check_ntt_multiply_matches_schoolbook(
-        RLWESignature::getParameterSet(SecurityLevel::TEST_TINY), 0x0102030405060708ULL);
-    check_ntt_multiply_matches_schoolbook(
-        RLWESignature::getParameterSet(SecurityLevel::TEST_SMALL), 0x1112131415161718ULL);
-    check_ntt_multiply_matches_schoolbook(
-        RLWESignature::getParameterSet(SecurityLevel::KYBER512), 0x2122232425262728ULL);
-    check_ntt_multiply_matches_schoolbook(
-        RLWESignature::getParameterSet(SecurityLevel::MODERATE), 0x3132333435363738ULL);
-    check_ntt_multiply_matches_schoolbook(
-        RLWESignature::getParameterSet(SecurityLevel::HIGH), 0x4142434445464748ULL);
+    using std::pair;
+    using std::vector;
+
+    vector<pair<RLWEParams, uint64_t>> configs = {
+        {BlindKEM::getParameterSet(SecurityLevel::TEST_TINY), 0x0102030405060708ULL},
+        {BlindKEM::getParameterSet(SecurityLevel::TEST_SMALL), 0x1112131415161718ULL},
+        {BlindKEM::getParameterSet(SecurityLevel::KYBER512), 0x2122232425262728ULL},
+        {BlindKEM::getParameterSet(SecurityLevel::MODERATE), 0x3132333435363738ULL},
+        {BlindKEM::getParameterSet(SecurityLevel::HIGH), 0x4142434445464748ULL}
+    };
+
+    for (const auto& [params, seed] : configs) {
+        check_ntt_multiply_matches_schoolbook(params, seed);
+    }
 }
