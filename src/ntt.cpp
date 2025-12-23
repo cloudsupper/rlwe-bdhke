@@ -79,7 +79,8 @@ void NTT::ntt(std::vector<std::uint64_t>& a, bool inverse) const {
 
 NTT::NTT(std::size_t n, std::uint64_t modulus_q, bool negacyclic)
     : n_(n), q_(modulus_q), negacyclic_(negacyclic),
-      omega_(0), omega_inv_(0), n_inv_(0), psi_powers_(nullptr), psi_powers_inv_(nullptr) {
+      omega_(0), omega_inv_(0), n_inv_(0),
+      psi_(0), psi_inv_(0), psi_powers_(nullptr), psi_powers_inv_(nullptr) {
 
     if (!isPowerOfTwo(n_)) {
         throw std::invalid_argument("NTT size n must be a power of two");
@@ -107,14 +108,19 @@ NTT::NTT(std::size_t n, std::uint64_t modulus_q, bool negacyclic)
         throw std::invalid_argument("NTT: no precomputed tables for given (n, q)");
     }
 
+    // Store primitive 2n‑th root psi and its inverse.
+    psi_ = tbl->psi;
+    psi_inv_ = tbl->psi_inv;
+
     // Underlying n‑point NTT uses omega = psi^2 (order n).
-    omega_ = modMul(tbl->psi, tbl->psi, q_);
+    omega_ = modMul(psi_, psi_, q_);
     omega_inv_ = modInverse(omega_, q_);
 
     n_inv_ = modInverse(static_cast<std::uint64_t>(n_), q_);
 
     if (negacyclic_) {
-        // These already contain psi^{2i+1} and psi^{-(2i+1)} for i in [0, n-1].
+        // Keep pointers to precomputed twist tables (not used directly in the
+        // current implementation, but useful for offline verification).
         psi_powers_ = tbl->twist;
         psi_powers_inv_ = tbl->twist_inv;
     }
@@ -128,9 +134,11 @@ void NTT::forward(std::vector<std::uint64_t>& a) const {
     }
 
     if (negacyclic_) {
-        // Apply the negacyclic twist: a_i <- a_i * psi^{2i+1}
+        // Apply the negacyclic twist: a_i <- a_i * psi^i
+        std::uint64_t w = 1;
         for (std::size_t i = 0; i < n_; ++i) {
-            a[i] = modMul(a[i], psi_powers_[i], q_);
+            a[i] = modMul(a[i], w, q_);
+            w = modMul(w, psi_, q_);
         }
     }
 
@@ -145,9 +153,11 @@ void NTT::inverse(std::vector<std::uint64_t>& a) const {
     ntt(a, /*inverse=*/true);
 
     if (negacyclic_) {
-        // Undo the twist: a_i <- a_i * psi^{-(2i+1)}
+        // Undo the twist: a_i <- a_i * psi^{-i}
+        std::uint64_t w_inv = 1;
         for (std::size_t i = 0; i < n_; ++i) {
-            a[i] = modMul(a[i], psi_powers_inv_[i], q_);
+            a[i] = modMul(a[i], w_inv, q_);
+            w_inv = modMul(w_inv, psi_inv_, q_);
         }
     }
 }

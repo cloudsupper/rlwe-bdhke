@@ -1,5 +1,59 @@
 #include <polynomial.h>
 #include <stdexcept>
+#include <ntt.h>
+
+/*
+static Polynomial multiplySchoolbook(const Polynomial& a,
+                                     const Polynomial& b) {
+    const std::size_t n = a.degree();
+    const std::uint64_t q = a.getModulus();
+
+    if (n != b.degree() || q != b.getModulus()) {
+        throw std::invalid_argument("Polynomials must be in the same ring");
+    }
+
+    Logger::log("[Schoolbook] Multiplying polynomials:\n  " + a.toString() +
+                "\n  " + b.toString());
+
+    const auto& a_coeffs = a.getCoeffs();
+    const auto& b_coeffs = b.getCoeffs();
+
+    std::vector<std::uint64_t> temp(2 * n, 0);
+
+    for (std::size_t i = 0; i < n; i++) {
+        for (std::size_t j = 0; j < n; j++) {
+            std::uint64_t prod =
+                (static_cast<std::uint64_t>(a_coeffs[i]) *
+                 static_cast<std::uint64_t>(b_coeffs[j])) % q;
+            temp[i + j] = (temp[i + j] + prod) % q;
+        }
+    }
+
+    Logger::log("[Schoolbook] Intermediate multiplication result:\n  " +
+                Logger::vectorToString(temp, "  temp = "));
+
+    Polynomial result(n, q);
+    for (std::size_t i = 0; i < n; i++) {
+        std::uint64_t coeff = temp[i];
+        std::size_t higher_degree = i + n;
+        while (higher_degree < temp.size()) {
+            // Reduce modulo x^n + 1 via c_i <- c_i - c_{i + kn} (mod q).
+            const std::int64_t diff = static_cast<std::int64_t>(coeff) -
+                                      static_cast<std::int64_t>(temp[higher_degree]);
+            const std::int64_t m = static_cast<std::int64_t>(q);
+            std::int64_t r = diff % m;
+            if (r < 0) r += m;
+            coeff = static_cast<std::uint64_t>(r);
+            higher_degree += n;
+        }
+        result[i] = coeff;
+    }
+
+    Logger::log("[Schoolbook] Final multiplication result after reduction:\n  " +
+                result.toString());
+    return result;
+}
+*/
 
 Polynomial Polynomial::polySignal() const {
     Polynomial result(ring_dim, modulus);
@@ -70,32 +124,28 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
         throw std::invalid_argument("Polynomials must be in the same ring");
     }
 
-    Logger::log("Multiplying polynomials:\n  " + toString() + "\n  " + other.toString());
+    Logger::log("Multiplying polynomials (NTT-accelerated where available):\n  " +
+                toString() + "\n  " + other.toString());
 
-    std::vector<uint64_t> temp(2 * ring_dim, 0);
 
-    for (size_t i = 0; i < ring_dim; i++) {
-        for (size_t j = 0; j < ring_dim; j++) {
-            uint64_t prod = (static_cast<uint64_t>(coeffs[i]) * 
-                           static_cast<uint64_t>(other.coeffs[j])) % modulus;
-            temp[i + j] = (temp[i + j] + prod) % modulus;
-        }
+    NTT ntt(ring_dim, modulus, /*negacyclic=*/true);
+
+    std::vector<std::uint64_t> a_vec = coeffs;
+    std::vector<std::uint64_t> b_vec = other.coeffs;
+
+    ntt.forward(a_vec);
+    ntt.forward(b_vec);
+
+    for (std::size_t i = 0; i < ring_dim; ++i) {
+        a_vec[i] = (a_vec[i] * b_vec[i]) % modulus;
     }
 
-    Logger::log("Intermediate multiplication result:\n  " + 
-                Logger::vectorToString(temp, "  temp = "));
+    ntt.inverse(a_vec);
+
     Polynomial result(ring_dim, modulus);
-    for (size_t i = 0; i < ring_dim; i++) {
-        result[i] = temp[i];
-        size_t higher_degree = i + ring_dim;
-        while (higher_degree < temp.size()) {
-            result[i] = mod(static_cast<int64_t>(result[i]) - 
-                          static_cast<int64_t>(temp[higher_degree]), modulus);
-            higher_degree += ring_dim;
-        }
-    }
+    result.setCoefficients(a_vec);
 
-    Logger::log("Final multiplication result after reduction:\n  " + result.toString());
+    Logger::log("NTT-based multiplication result:\n  " + result.toString());
     return result;
 }
 

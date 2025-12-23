@@ -2,24 +2,6 @@
 
 This project implements a Ring Learning With Errors (RLWE) based blind exchange protocol, designed as an alternative to the current BDHKE (Blind Diffie-Hellman Key Exchange) used in Cashu. This implementation replaces elliptic curve primitives with lattice-based cryptography primitives that are believed to be quantum-resistant.
 
-## ⚠️ Security Notice
-
-**Default parameters are now set to a KYBER512-like, NTT-friendly parameter set** providing ~128 bits of classical security.
-
-The previous test parameters (n=8, n=32) are **INSECURE** and only suitable for development/testing. They are still available via `SecurityLevel::TEST_TINY` and `SecurityLevel::TEST_SMALL` for fast unit tests.
-
-### Security Levels
-
-| Level | n | q | σ | Classical | Quantum | Status |
-|-------|---|---|---|-----------|---------|---------|
-| **KYBER512-like (default)** | 256 | 7681 | 3.0 | ~128 bits | ~64 bits | ✅ SECURE |
-| **MODERATE** | 512 | 12289 | 3.2 | ~192 bits | ~96 bits | ✅ SECURE |
-| **HIGH** | 1024 | 18433 | 3.2 | ~256 bits | ~128 bits | ✅ SECURE |
-| TEST_TINY | 8 | 7681 | 3.0 | ~4 bits | ~2 bits | ⚠️ INSECURE |
-| TEST_SMALL | 32 | 7681 | 3.0 | ~16 bits | ~8 bits | ⚠️ INSECURE |
-
-See [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) for detailed security analysis.
-
 ## Quick Start
 
 ### Using Secure Defaults (Recommended)

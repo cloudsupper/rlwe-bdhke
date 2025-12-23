@@ -88,7 +88,14 @@ private:
     std::uint64_t omega_inv_;  ///< inverse of omega
     std::uint64_t n_inv_;      ///< modular inverse of n modulo q
 
-    // Precomputed negacyclic twist tables psi^{2i+1} and psi^{-(2i+1)}
+    // Primitive 2n‑th root of unity psi and its inverse, used for the
+    // negacyclic twist factors psi^i and psi^{-i}.
+    std::uint64_t psi_;
+    std::uint64_t psi_inv_;
+
+    // Precomputed negacyclic twist tables (kept for offline verification
+    // and potential future optimizations). The current implementation
+    // derives psi^i and psi^{-i} on the fly from psi_ and psi_inv_.
     const std::uint64_t* psi_powers_;      ///< psi^{2i+1}
     const std::uint64_t* psi_powers_inv_;  ///< psi^{-(2i+1)}
 
