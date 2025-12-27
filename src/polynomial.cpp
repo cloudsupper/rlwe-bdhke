@@ -74,26 +74,78 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
     Logger::log("Multiplying polynomials (NTT-accelerated where available):\n  " +
                 toString() + "\n  " + other.toString());
 
+    // Try NTT-based multiplication first. If precomputed tables are not
+    // available for this (n, q) pair, fall back to a simple schoolbook
+    // multiplication in Z_q[x]/(x^n + 1).
+    try {
+        NTT ntt(ring_dim, modulus, /*negacyclic=*/true);
 
-    NTT ntt(ring_dim, modulus, /*negacyclic=*/true);
+        std::vector<std::uint64_t> a_vec = coeffs;
+        std::vector<std::uint64_t> b_vec = other.coeffs;
 
-    std::vector<std::uint64_t> a_vec = coeffs;
-    std::vector<std::uint64_t> b_vec = other.coeffs;
+        ntt.forward(a_vec);
+        ntt.forward(b_vec);
 
-    ntt.forward(a_vec);
-    ntt.forward(b_vec);
+        for (std::size_t i = 0; i < ring_dim; ++i) {
+            a_vec[i] = (a_vec[i] * b_vec[i]) % modulus;
+        }
 
-    for (std::size_t i = 0; i < ring_dim; ++i) {
-        a_vec[i] = (a_vec[i] * b_vec[i]) % modulus;
+        ntt.inverse(a_vec);
+
+        Polynomial result(ring_dim, modulus);
+        result.setCoefficients(a_vec);
+
+        Logger::log("NTT-based multiplication result:\n  " + result.toString());
+        return result;
+    } catch (const std::invalid_argument& e) {
+        // Detect the specific case where NTT tables are missing and perform a
+        // straightforward schoolbook multiplication instead. We intentionally
+        // do not rethrow here so that small test rings (e.g., n=4, q=17)
+        // continue to work without dedicated NTT tables.
+        std::string msg = e.what();
+        if (msg != "NTT: no precomputed tables for given (n, q)") {
+            throw;  // Some other precondition failed; propagate the error.
+        }
+
+        Logger::log("NTT tables not available for this (n, q); falling back to "
+                    "schoolbook polynomial multiplication.");
+
+        // Schoolbook convolution in Z_q[x]/(x^n + 1).
+        // We first compute the ordinary product c(x) = a(x) * b(x) of degree
+        // up to 2n-2, then reduce modulo x^n + 1 by folding the upper terms
+        // back with a sign flip: x^n == -1.
+
+        std::vector<std::uint64_t> prod(2 * ring_dim - 1, 0);
+
+        for (std::size_t i = 0; i < ring_dim; ++i) {
+            for (std::size_t j = 0; j < ring_dim; ++j) {
+                std::size_t k = i + j;
+                prod[k] = (prod[k] + (coeffs[i] * other.coeffs[j]) % modulus) % modulus;
+            }
+        }
+
+        std::vector<std::uint64_t> reduced(ring_dim, 0);
+
+        // Lower terms (degree < n) copy directly.
+        for (std::size_t k = 0; k < ring_dim; ++k) {
+            reduced[k] = prod[k] % modulus;
+        }
+
+        // Fold higher-degree terms using x^n == -1.
+        for (std::size_t k = ring_dim; k < prod.size(); ++k) {
+            std::size_t idx = k - ring_dim;
+            // reduced[idx] -= prod[k] (mod q)
+            uint64_t val = prod[k] % modulus;
+            int64_t tmp = static_cast<int64_t>(reduced[idx]) - static_cast<int64_t>(val);
+            reduced[idx] = mod(tmp, modulus);
+        }
+
+        Polynomial result(ring_dim, modulus);
+        result.setCoefficients(reduced);
+
+        Logger::log("Schoolbook multiplication result:\n  " + result.toString());
+        return result;
     }
-
-    ntt.inverse(a_vec);
-
-    Polynomial result(ring_dim, modulus);
-    result.setCoefficients(a_vec);
-
-    Logger::log("NTT-based multiplication result:\n  " + result.toString());
-    return result;
 }
 
 Polynomial Polynomial::operator*(uint64_t scalar) const {
