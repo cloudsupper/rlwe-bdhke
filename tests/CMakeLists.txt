@@ -13,6 +13,7 @@ add_executable(kem_tests
     sha256_test.cpp
     ntt_test.cpp
     polynomial_ntt_multiply_test.cpp
+    kem_test.cpp
 )
 
 # Link against Google Test and our library

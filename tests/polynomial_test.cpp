@@ -116,7 +116,7 @@ TEST_F(PolynomialTest, PolySignalRounding) {
 
     Polynomial s = p.polySignal();
 
-    std::vector<uint64_t> expected = {0, 0, 8, 8, 8, 8, 0, 0};
+    std::vector<uint64_t> expected = {0, 0, 1, 1, 1, 1, 0, 0};
     ASSERT_EQ(s.degree(), expected.size());
     for (size_t i = 0; i < expected.size(); ++i) {
         EXPECT_EQ(s[i], expected[i]) << "Mismatch at index " << i;

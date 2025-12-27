@@ -6,6 +6,7 @@
 #include <limits>
 #include <random>
 #include <sha256.h>
+#include <vector>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -45,6 +46,9 @@ static void getSecureRandomBytes(uint8_t* buffer, size_t length) {
     }
 #endif
 }
+
+// (utf-8) "RLWE_KEM_POLYNOMIAL_A"
+uint8_t CONSTANT_POLY_A[] = {0x52, 0x4c, 0x57, 0x45, 0x5f, 0x4b, 0x45, 0x4d, 0x5f, 0x50, 0x4f, 0x4c, 0x59, 0x4e, 0x4f, 0x4d, 0x49, 0x41, 0x4c, 0x5f, 0x41};
 
 uint64_t KEM::getRandomUint64() {
     uint64_t result;
@@ -96,19 +100,19 @@ static bool validatePowerOfTwo(size_t n) {
 RLWEParams KEM::getParameterSet(SecurityLevel level) {
     switch (level) {
         case SecurityLevel::TEST_TINY:
-            return {8, 7681, 3.0, "TEST_TINY (INSECURE)", 4, 2, false};
+            return {8, 7681, 0.1, "TEST_TINY (INSECURE)", 4, 2, false};
         
         case SecurityLevel::TEST_SMALL:
-            return {32, 7681, 3.0, "TEST_SMALL (INSECURE)", 16, 8, false};
+            return {32, 7681, 0.1, "TEST_SMALL (INSECURE)", 16, 8, false};
         
         case SecurityLevel::KYBER512:
-            return {256, 7681, 3.0, "KYBER512-like (NTT-friendly)", 128, 64, true};
+            return {256, 7681, 0.1, "KYBER512-like (NTT-friendly)", 128, 64, true};
         
         case SecurityLevel::MODERATE:
-            return {512, 12289, 3.2, "MODERATE", 192, 96, true};
+            return {512, 12289, 0.1, "MODERATE", 192, 96, true};
         
         case SecurityLevel::HIGH:
-            return {1024, 18433, 3.2, "HIGH", 256, 128, true};
+            return {1024, 18433, 0.1, "HIGH", 256, 128, true};
         
         default:
             return {256, 7681, 3.0, "KYBER512-like (NTT-friendly)", 128, 64, true};
@@ -235,7 +239,8 @@ void KEM::validateSecurityParameters() {
 
 void KEM::generateKeys() {
     Logger::log("\nGenerating keys...");
-    a = sampleUniform();
+    a = hashToPolynomial(std::vector(std::begin(CONSTANT_POLY_A), std::end(CONSTANT_POLY_A
+    )));
     s = sampleGaussian(gaussian_stddev);
     
     Logger::log("Sampling gaussian polynomial e with σ=" + std::to_string(gaussian_stddev));
@@ -247,6 +252,15 @@ void KEM::generateKeys() {
     Logger::log("Public key a: " + a.toString());
     Logger::log("Public key b: " + b.toString());  
     Logger::log("Secret key s: " + s.toString());
+}
+
+std::vector<uint8_t> KEM::getSharedSecret(const Polynomial& public_key) {
+    auto c = (s * public_key).polySignal();
+    std::vector<uint8_t> result(std::ceil(c.degree() / 8.0), 0);
+    for (std::size_t i = 0; i < c.degree(); ++i) {
+        result[i / 8] |= (c[i] & 1) << (7 - (i & 7));
+    }
+    return result;
 }
 
 Polynomial KEM::sampleUniform() {

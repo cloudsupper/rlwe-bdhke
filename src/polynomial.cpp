@@ -14,7 +14,7 @@ Polynomial Polynomial::polySignal() const {
             (coeff >= half_mod) ? modulus - coeff + half_mod : modulus - half_mod + coeff
         );
         
-        result[i] = (dist_to_zero <= dist_to_half) ? 0 : half_mod;
+        result[i] = (dist_to_zero <= dist_to_half) ? 0 : 1;
     }
     
     Logger::log("Rounded polynomial coefficients to binary signal");

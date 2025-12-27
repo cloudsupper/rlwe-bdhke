@@ -126,10 +126,10 @@ public:
     /**
      * @brief Retrieve the public key.
      *
-     * @return Pair (a, b) representing the public key.
+     * @return b polynomial representing the public key.
      */
-    std::pair<Polynomial, Polynomial> getPublicKey() const {
-        return std::make_pair(a, b);
+    Polynomial getPublicKey() const {
+        return b;
     }
 
     /**
@@ -166,6 +166,8 @@ public:
      * compare their recovered secret against the ground truth.
      */
     Polynomial getSecretKeyForTesting() const { return s; }
+
+    std::vector<uint8_t> getSharedSecret(const Polynomial& public_key);
 
 private:
     size_t ring_dim_n;
