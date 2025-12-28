@@ -66,8 +66,6 @@ struct RLWEParams {
     size_t n;
     /** Coefficient modulus. */
     uint64_t q;
-    /** Gaussian standard deviation for noise sampling. */
-    double sigma;
     /** Human-readable name of the parameter set. */
     const char* name;
     /** Estimated classical security level in bits. */
@@ -92,13 +90,10 @@ public:
      *
      * @param n Ring dimension (must be a power of two).
      * @param q Coefficient modulus.
-     * @param sigma Standard deviation of the discrete Gaussian
-     *             used for noise sampling. If zero or negative,
-     *             a reasonable default is chosen.
      *
      * @throws std::invalid_argument If @p n is not a power of two.
      */
-    KEM(size_t n, uint64_t q, double sigma = 0.0);
+    KEM(size_t n, uint64_t q);
 
     /**
      * @brief Construct an RLWE instance from a named security level.
@@ -172,7 +167,6 @@ public:
 private:
     size_t ring_dim_n;
     uint64_t modulus;
-    double gaussian_stddev;
 
     Polynomial a;
     Polynomial b;
@@ -201,7 +195,7 @@ private:
      *
      * @param stddev Standard deviation of the Gaussian.
      */
-    Polynomial sampleGaussian(double stddev);
+    Polynomial sampleSmallUniform();
 
     /**
      * @brief Encode a message as a polynomial with 0/1 coefficients.

@@ -24,7 +24,6 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     RLWEParams tiny = KEM::getParameterSet(SecurityLevel::TEST_TINY);
     EXPECT_EQ(tiny.n, static_cast<size_t>(8));
     EXPECT_EQ(tiny.q, static_cast<uint64_t>(7681));
-    EXPECT_DOUBLE_EQ(tiny.sigma, 3.0);
     EXPECT_STREQ(tiny.name, "TEST_TINY (INSECURE)");
     EXPECT_EQ(tiny.classical_bits, 4);
     EXPECT_EQ(tiny.quantum_bits, 2);
@@ -33,7 +32,6 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     RLWEParams small = KEM::getParameterSet(SecurityLevel::TEST_SMALL);
     EXPECT_EQ(small.n, static_cast<size_t>(32));
     EXPECT_EQ(small.q, static_cast<uint64_t>(7681));
-    EXPECT_DOUBLE_EQ(small.sigma, 3.0);
     EXPECT_STREQ(small.name, "TEST_SMALL (INSECURE)");
     EXPECT_EQ(small.classical_bits, 16);
     EXPECT_EQ(small.quantum_bits, 8);
@@ -42,7 +40,6 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     RLWEParams kyber = KEM::getParameterSet(SecurityLevel::KYBER512);
     EXPECT_EQ(kyber.n, static_cast<size_t>(256));
     EXPECT_EQ(kyber.q, static_cast<uint64_t>(7681));
-    EXPECT_DOUBLE_EQ(kyber.sigma, 3.0);
     EXPECT_STREQ(kyber.name, "KYBER512-like (NTT-friendly)");
     EXPECT_EQ(kyber.classical_bits, 128);
     EXPECT_EQ(kyber.quantum_bits, 64);
@@ -51,7 +48,6 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     RLWEParams moderate = KEM::getParameterSet(SecurityLevel::MODERATE);
     EXPECT_EQ(moderate.n, static_cast<size_t>(512));
     EXPECT_EQ(moderate.q, static_cast<uint64_t>(12289));
-    EXPECT_DOUBLE_EQ(moderate.sigma, 3.2);
     EXPECT_STREQ(moderate.name, "MODERATE");
     EXPECT_EQ(moderate.classical_bits, 192);
     EXPECT_EQ(moderate.quantum_bits, 96);
@@ -60,7 +56,6 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     RLWEParams high = KEM::getParameterSet(SecurityLevel::HIGH);
     EXPECT_EQ(high.n, static_cast<size_t>(1024));
     EXPECT_EQ(high.q, static_cast<uint64_t>(18433));
-    EXPECT_DOUBLE_EQ(high.sigma, 3.2);
     EXPECT_STREQ(high.name, "HIGH");
     EXPECT_EQ(high.classical_bits, 256);
     EXPECT_EQ(high.quantum_bits, 128);
@@ -70,29 +65,17 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
 TEST(KEMConstructorTest, ExplicitParamsAcceptPowerOfTwo)
 {
     // n is a power of two -> should construct successfully.
-    KEM kem(8, 7681, 3.2);
+    KEM kem(8, 7681);
     RLWEParams p = kem.getParameters();
 
     EXPECT_EQ(p.n, static_cast<size_t>(8));
     EXPECT_EQ(p.q, static_cast<uint64_t>(7681));
-    EXPECT_DOUBLE_EQ(p.sigma, 3.2);
-}
-
-TEST(KEMConstructorTest, ExplicitParamsDefaultSigmaWhenNonPositive)
-{
-    // sigma <= 0 should fall back to default 3.2
-    KEM kem(8, 7681, 0.0);
-    RLWEParams p = kem.getParameters();
-
-    EXPECT_EQ(p.n, static_cast<size_t>(8));
-    EXPECT_EQ(p.q, static_cast<uint64_t>(7681));
-    EXPECT_DOUBLE_EQ(p.sigma, 3.2);
 }
 
 TEST(KEMConstructorTest, ThrowsOnNonPowerOfTwoDimension)
 {
-    EXPECT_THROW((KEM(7, 7681, 3.2)), std::invalid_argument);
-    EXPECT_THROW((KEM(0, 7681, 3.2)), std::invalid_argument);
+    EXPECT_THROW((KEM(7, 7681)), std::invalid_argument);
+    EXPECT_THROW((KEM(0, 7681)), std::invalid_argument);
 }
 
 TEST(KEMConstructorTest, SecurityLevelConstructorMatchesParameterSet)
@@ -104,7 +87,6 @@ TEST(KEMConstructorTest, SecurityLevelConstructorMatchesParameterSet)
 
         EXPECT_EQ(active.n, params.n);
         EXPECT_EQ(active.q, params.q);
-        EXPECT_DOUBLE_EQ(active.sigma, params.sigma);
 
         // is_secure should be consistent with the heuristic in getParameters().
         EXPECT_EQ(active.is_secure, params.is_secure);
@@ -121,7 +103,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 {
     {
         // n < 128
-        KEM kem(64, 7681, 3.0);
+        KEM kem(64, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, static_cast<int>(64 * 0.5));
         EXPECT_EQ(p.quantum_bits, static_cast<int>(64 * 0.25));
@@ -130,7 +112,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 
     {
         // 128 <= n < 256
-        KEM kem(128, 7681, 3.0);
+        KEM kem(128, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, 80);
         EXPECT_EQ(p.quantum_bits, 40);
@@ -139,7 +121,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 
     {
         // n >= 256
-        KEM kem(256, 7681, 3.0);
+        KEM kem(256, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, static_cast<int>(256 * 0.6));
         EXPECT_EQ(p.quantum_bits, static_cast<int>(256 * 0.3));
