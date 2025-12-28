@@ -1,13 +1,13 @@
 # Create the library
-add_library(kem
-    kem.cpp
+add_library(rlwe
+    rlwe.cpp
     polynomial.cpp
     ntt.cpp
     sha256.cpp
 )
 
 # Add include directories
-target_include_directories(kem
+target_include_directories(rlwe
     PUBLIC
         ${CMAKE_SOURCE_DIR}/include
     PRIVATE
@@ -15,7 +15,7 @@ target_include_directories(kem
 )
 
 # Link with OpenMP and OpenSSL
-target_link_libraries(kem 
+target_link_libraries(rlwe 
     PRIVATE 
         OpenMP::OpenMP_CXX
         OpenSSL::SSL 

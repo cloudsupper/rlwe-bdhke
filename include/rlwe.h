@@ -83,17 +83,17 @@ struct RLWEParams {
  * over the ring @f$Z_q[x]/(x^n + 1)@f$. It supports key generation
  * and handshake.
  */
-class KEM {
+class RLWE {
 public:
     /**
-     * @brief Construct a KEM instance with explicit parameters.
+     * @brief Construct a RLWE instance with explicit parameters.
      *
      * @param n Ring dimension (must be a power of two).
      * @param q Coefficient modulus.
      *
      * @throws std::invalid_argument If @p n is not a power of two.
      */
-    KEM(size_t n, uint64_t q);
+    RLWE(size_t n, uint64_t q);
 
     /**
      * @brief Construct an RLWE instance from a named security level.
@@ -107,7 +107,7 @@ public:
      * @throws std::invalid_argument If the derived ring dimension is
      *         not a power of two.
      */
-    explicit KEM(SecurityLevel level = SecurityLevel::KYBER512);
+    explicit RLWE(SecurityLevel level = SecurityLevel::KYBER512);
 
     /**
      * @brief Generate a fresh key pair.

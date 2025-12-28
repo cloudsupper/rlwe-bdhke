@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <kem.h>
+#include <rlwe.h>
 #include <logging.h>
 
 #include <cstdint>
@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-// Basic tests for the KEM (kem.cpp) module.
+// Basic tests for the RLWE (kem.cpp) module.
 //
 // These tests focus on deterministic behavior:
 //  - Parameter set selection
@@ -21,7 +21,7 @@
 
 TEST(KEMParamsTest, ParameterSetsMatchSpec)
 {
-    RLWEParams tiny = KEM::getParameterSet(SecurityLevel::TEST_TINY);
+    RLWEParams tiny = RLWE::getParameterSet(SecurityLevel::TEST_TINY);
     EXPECT_EQ(tiny.n, static_cast<size_t>(8));
     EXPECT_EQ(tiny.q, static_cast<uint64_t>(7681));
     EXPECT_STREQ(tiny.name, "TEST_TINY (INSECURE)");
@@ -29,7 +29,7 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     EXPECT_EQ(tiny.quantum_bits, 2);
     EXPECT_FALSE(tiny.is_secure);
 
-    RLWEParams small = KEM::getParameterSet(SecurityLevel::TEST_SMALL);
+    RLWEParams small = RLWE::getParameterSet(SecurityLevel::TEST_SMALL);
     EXPECT_EQ(small.n, static_cast<size_t>(32));
     EXPECT_EQ(small.q, static_cast<uint64_t>(7681));
     EXPECT_STREQ(small.name, "TEST_SMALL (INSECURE)");
@@ -37,7 +37,7 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     EXPECT_EQ(small.quantum_bits, 8);
     EXPECT_FALSE(small.is_secure);
 
-    RLWEParams kyber = KEM::getParameterSet(SecurityLevel::KYBER512);
+    RLWEParams kyber = RLWE::getParameterSet(SecurityLevel::KYBER512);
     EXPECT_EQ(kyber.n, static_cast<size_t>(256));
     EXPECT_EQ(kyber.q, static_cast<uint64_t>(7681));
     EXPECT_STREQ(kyber.name, "KYBER512-like (NTT-friendly)");
@@ -45,7 +45,7 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     EXPECT_EQ(kyber.quantum_bits, 64);
     EXPECT_TRUE(kyber.is_secure);
 
-    RLWEParams moderate = KEM::getParameterSet(SecurityLevel::MODERATE);
+    RLWEParams moderate = RLWE::getParameterSet(SecurityLevel::MODERATE);
     EXPECT_EQ(moderate.n, static_cast<size_t>(512));
     EXPECT_EQ(moderate.q, static_cast<uint64_t>(12289));
     EXPECT_STREQ(moderate.name, "MODERATE");
@@ -53,7 +53,7 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
     EXPECT_EQ(moderate.quantum_bits, 96);
     EXPECT_TRUE(moderate.is_secure);
 
-    RLWEParams high = KEM::getParameterSet(SecurityLevel::HIGH);
+    RLWEParams high = RLWE::getParameterSet(SecurityLevel::HIGH);
     EXPECT_EQ(high.n, static_cast<size_t>(1024));
     EXPECT_EQ(high.q, static_cast<uint64_t>(18433));
     EXPECT_STREQ(high.name, "HIGH");
@@ -65,7 +65,7 @@ TEST(KEMParamsTest, ParameterSetsMatchSpec)
 TEST(KEMConstructorTest, ExplicitParamsAcceptPowerOfTwo)
 {
     // n is a power of two -> should construct successfully.
-    KEM kem(8, 7681);
+    RLWE kem(8, 7681);
     RLWEParams p = kem.getParameters();
 
     EXPECT_EQ(p.n, static_cast<size_t>(8));
@@ -74,15 +74,15 @@ TEST(KEMConstructorTest, ExplicitParamsAcceptPowerOfTwo)
 
 TEST(KEMConstructorTest, ThrowsOnNonPowerOfTwoDimension)
 {
-    EXPECT_THROW((KEM(7, 7681)), std::invalid_argument);
-    EXPECT_THROW((KEM(0, 7681)), std::invalid_argument);
+    EXPECT_THROW((RLWE(7, 7681)), std::invalid_argument);
+    EXPECT_THROW((RLWE(0, 7681)), std::invalid_argument);
 }
 
 TEST(KEMConstructorTest, SecurityLevelConstructorMatchesParameterSet)
 {
     auto check_level = [](SecurityLevel level) {
-        RLWEParams params = KEM::getParameterSet(level);
-        KEM kem(level);
+        RLWEParams params = RLWE::getParameterSet(level);
+        RLWE kem(level);
         RLWEParams active = kem.getParameters();
 
         EXPECT_EQ(active.n, params.n);
@@ -103,7 +103,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 {
     {
         // n < 128
-        KEM kem(64, 7681);
+        RLWE kem(64, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, static_cast<int>(64 * 0.5));
         EXPECT_EQ(p.quantum_bits, static_cast<int>(64 * 0.25));
@@ -112,7 +112,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 
     {
         // 128 <= n < 256
-        KEM kem(128, 7681);
+        RLWE kem(128, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, 80);
         EXPECT_EQ(p.quantum_bits, 40);
@@ -121,7 +121,7 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 
     {
         // n >= 256
-        KEM kem(256, 7681);
+        RLWE kem(256, 7681);
         RLWEParams p = kem.getParameters();
         EXPECT_EQ(p.classical_bits, static_cast<int>(256 * 0.6));
         EXPECT_EQ(p.quantum_bits, static_cast<int>(256 * 0.3));
@@ -132,8 +132,8 @@ TEST(KEMGetParametersTest, ClassifiesSecurityByRingDimension)
 TEST(KEMKeyGenTest, GeneratesPolynomialsWithCorrectShape)
 {
     // Use the HIGH security parameter set.
-    KEM kem(SecurityLevel::HIGH);
-    RLWEParams params = KEM::getParameterSet(SecurityLevel::HIGH);
+    RLWE kem(SecurityLevel::HIGH);
+    RLWEParams params = RLWE::getParameterSet(SecurityLevel::HIGH);
 
     kem.generateKeys();
 
@@ -148,8 +148,8 @@ TEST(KEMKeyGenTest, GeneratesPolynomialsWithCorrectShape)
 
 TEST(KEMHashToPolynomialTest, CoefficientsAreZeroOrHalfQ)
 {
-    KEM kem(SecurityLevel::HIGH);
-    RLWEParams params = KEM::getParameterSet(SecurityLevel::HIGH);
+    RLWE kem(SecurityLevel::HIGH);
+    RLWEParams params = RLWE::getParameterSet(SecurityLevel::HIGH);
 
     std::vector<uint8_t> message = {0x01, 0x02, 0x03};
     Polynomial p = kem.hashToPolynomial(message);
@@ -168,7 +168,7 @@ TEST(KEMHashToPolynomialTest, CoefficientsAreZeroOrHalfQ)
 
 TEST(KEMHashToPolynomialTest, DeterministicForSameMessage)
 {
-    KEM kem(SecurityLevel::HIGH);
+    RLWE kem(SecurityLevel::HIGH);
     std::vector<uint8_t> message = {'t', 'e', 's', 't'};
 
     Polynomial p1 = kem.hashToPolynomial(message);
@@ -179,7 +179,7 @@ TEST(KEMHashToPolynomialTest, DeterministicForSameMessage)
 
 TEST(KEMHashToPolynomialTest, DifferentMessagesUsuallyDifferentPolynomials)
 {
-    KEM kem(SecurityLevel::HIGH);
+    RLWE kem(SecurityLevel::HIGH);
     std::vector<uint8_t> msg1 = {'a', 'b', 'c'};
     std::vector<uint8_t> msg2 = {'a', 'b', 'd'};
 
@@ -193,8 +193,8 @@ TEST(KEMHashToPolynomialTest, DifferentMessagesUsuallyDifferentPolynomials)
 TEST(KEMSharedSecretTest, SharedSecretAgreement)
 {
     // Use HIGH security level for this functional test.
-    KEM kem_1(SecurityLevel::HIGH);
-    KEM kem_2(SecurityLevel::HIGH);
+    RLWE kem_1(SecurityLevel::HIGH);
+    RLWE kem_2(SecurityLevel::HIGH);
     kem_1.generateKeys();
     kem_2.generateKeys();
 
@@ -221,7 +221,7 @@ TEST(KEMLoggingTest, ValidateSecurityParametersEmitsMessagesWhenEnabled)
 
     {
         // Constructor calls validateSecurityParameters() internally.
-        KEM kem(SecurityLevel::HIGH);
+        RLWE kem(SecurityLevel::HIGH);
         (void)kem;
     }
 

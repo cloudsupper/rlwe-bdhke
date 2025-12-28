@@ -1,5 +1,5 @@
 #include <polynomial.h>
-#include <kem.h>
+#include <rlwe.h>
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
@@ -50,13 +50,13 @@ static void getSecureRandomBytes(uint8_t* buffer, size_t length) {
 // (utf-8) "RLWE_KEM_POLYNOMIAL_A"
 uint8_t CONSTANT_POLY_A[] = {0x52, 0x4c, 0x57, 0x45, 0x5f, 0x4b, 0x45, 0x4d, 0x5f, 0x50, 0x4f, 0x4c, 0x59, 0x4e, 0x4f, 0x4d, 0x49, 0x41, 0x4c, 0x5f, 0x41};
 
-uint64_t KEM::getRandomUint64() {
+uint64_t RLWE::getRandomUint64() {
     uint64_t result;
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&result), sizeof(result));
     return result;
 }
 
-double KEM::getRandomDouble() {
+double RLWE::getRandomDouble() {
     uint64_t r1, r2;
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&r1), sizeof(r1));
     getSecureRandomBytes(reinterpret_cast<uint8_t*>(&r2), sizeof(r2));
@@ -97,7 +97,7 @@ static bool validatePowerOfTwo(size_t n) {
 #endif
 }
 
-RLWEParams KEM::getParameterSet(SecurityLevel level) {
+RLWEParams RLWE::getParameterSet(SecurityLevel level) {
     switch (level) {
         case SecurityLevel::TEST_TINY:
             return {8, 7681, "TEST_TINY (INSECURE)", 4, 2, false};
@@ -119,7 +119,7 @@ RLWEParams KEM::getParameterSet(SecurityLevel level) {
     }
 }
 
-KEM::KEM(size_t n, uint64_t q)
+RLWE::RLWE(size_t n, uint64_t q)
     : ring_dim_n(n),
       modulus(q),
       a(n, q),
@@ -136,7 +136,7 @@ KEM::KEM(size_t n, uint64_t q)
     validateSecurityParameters();
 }
 
-KEM::KEM(SecurityLevel level) 
+RLWE::RLWE(SecurityLevel level) 
     : ring_dim_n(0),
       modulus(0),
       a(1, 1),
@@ -180,7 +180,7 @@ KEM::KEM(SecurityLevel level)
     validateSecurityParameters();
 }
 
-RLWEParams KEM::getParameters() const {
+RLWEParams RLWE::getParameters() const {
     RLWEParams params;
     params.n = ring_dim_n;
     params.q = modulus;
@@ -203,7 +203,7 @@ RLWEParams KEM::getParameters() const {
     return params;
 }
 
-void KEM::validateSecurityParameters() {
+void RLWE::validateSecurityParameters() {
     double alpha = 3.2 / modulus;
     
     Logger::log("\nValidating security parameters...");
@@ -232,7 +232,7 @@ void KEM::validateSecurityParameters() {
     Logger::log("Parameter validation complete.\n");
 }
 
-void KEM::generateKeys() {
+void RLWE::generateKeys() {
     Logger::log("\nGenerating keys...");
     a = hashToPolynomial(std::vector(std::begin(CONSTANT_POLY_A), std::end(CONSTANT_POLY_A
     )));
@@ -249,7 +249,7 @@ void KEM::generateKeys() {
     Logger::log("Secret key s: " + s.toString());
 }
 
-std::vector<uint8_t> KEM::getSharedSecret(const Polynomial& public_key) {
+std::vector<uint8_t> RLWE::getSharedSecret(const Polynomial& public_key) {
     auto c = (s * public_key).polySignal();
     std::vector<uint8_t> result(std::ceil(c.degree() / 8.0), 0);
     for (std::size_t i = 0; i < c.degree(); ++i) {
@@ -258,7 +258,7 @@ std::vector<uint8_t> KEM::getSharedSecret(const Polynomial& public_key) {
     return result;
 }
 
-Polynomial KEM::sampleUniform() {
+Polynomial RLWE::sampleUniform() {
     std::vector<uint64_t> coeffs(ring_dim_n);
     
     for (size_t i = 0; i < ring_dim_n; i++) {
@@ -268,7 +268,7 @@ Polynomial KEM::sampleUniform() {
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial KEM::sampleSmallUniform() {
+Polynomial RLWE::sampleSmallUniform() {
     std::vector<uint64_t> coeffs(ring_dim_n);
 
     for (size_t i = 0; i < ring_dim_n; ++i) {
@@ -291,7 +291,7 @@ Polynomial KEM::sampleSmallUniform() {
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial KEM::messageToPolynomial(const std::vector<uint8_t>& message) {
+Polynomial RLWE::messageToPolynomial(const std::vector<uint8_t>& message) {
     std::vector<uint64_t> coeffs(ring_dim_n, 0);
     
     size_t coeff_idx = 0;
@@ -305,7 +305,7 @@ Polynomial KEM::messageToPolynomial(const std::vector<uint8_t>& message) {
     return Polynomial(coeffs, modulus);
 }
 
-Polynomial KEM::hashToPolynomial(const std::vector<uint8_t>& message) {
+Polynomial RLWE::hashToPolynomial(const std::vector<uint8_t>& message) {
     Logger::log("\nConverting message to polynomial using counter-based hashing");
     logMessageBytes("Input message", message);
     
